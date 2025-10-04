@@ -5,7 +5,7 @@
 **Title**: Heterogeneous Selection Learning Swarm Optimization Algorithm for Large-Scale Global Optimization
 
 ```
- Authors：Qingke Zhang*, Guanghui Zhou, Xingchen Dong, Junqing Li, Sichen Tao 
+ Authors：Qingke Zhang*, Guanghui Zhou, Xingchen Dong, Kaitong Fu, Junqing Li, Sichen Tao 
 ```
 > 1. School of Information Science and Engineering, Shandong Normal University, Jinan 250358, China
 > 

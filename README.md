@@ -38,7 +38,7 @@ Large-scale global optimization (LSGO) is difficult due to high dimensionality, 
 ```MATLAB
 % =========================================================================
 %  HSLSO: Heterogeneous Selection Learning Swarm Optimization (for LSGO)
-%  Copyright (c) 2025, Qingke Zhang @ SDNU CILab
+%  Copyright (c) 2026, Qingke Zhang @ SDNU CILab
 %  This code is released for academic and research use.
 %  Please cite the related paper when using or modifying.
 % =========================================================================

@@ -2,21 +2,20 @@
 
 ## Heterogeneous Selection Learning Swarm Optimization (HSLSO) 
 
-**Title**: Heterogeneous Selection Learning Swarm Optimization Algorithm for Large-Scale Global Optimization
+**Title**: Heterogeneous selection learning swarm optimization for large-scale global optimization and biological multiple sequence alignment
 
 ```
- Authors：Qingke Zhang*, Guanghui Zhou, Xingchen Dong, Kaitong Fu, Junqing Li, Sichen Tao 
+ Authors：Qingke Zhang*, Guanghui Zhou, Lingyu Lv, Sichen Tao，Junqing Li
 ```
 > 1. School of Information Science and Engineering, Shandong Normal University, Jinan 250358, China
 > 
 > 2. School of Information Science and Engineering, Yunnan Normal University,  Yunan 650500, China
 > 
-> 3. Faculty of Engineering, University of Toyama, Toyama-shi 930-8555, Japan
+> 3. Cyberscience Center, Tohoku University, Sendai-shi 980-8578, Japan
 > 
 
 > Corresponding Author: **Qingke Zhang** ， Email: tsingke@sdnu.edu.cn ， Tel :  +86-13953128163
 
-This paper is being considered for submission to the Elsevier journal (JCR Q1）
 
 ### 1. Introduction
 

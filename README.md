@@ -5,13 +5,12 @@
 **Title**: Heterogeneous selection learning swarm optimization for large-scale global optimization and biological multiple sequence alignment
 
 ```
- Authors：Qingke Zhang*, Guanghui Zhou, Lingyu Lv, Sichen Tao，Junqing Li
+ Authors：Qingke Zhang*, Guanghui Zhou, Xingchen Dong, Kaitong Fu，Xiaolin Wang， Sichen Tao，Huaxiang Zhang
 ```
 > 1. School of Information Science and Engineering, Shandong Normal University, Jinan 250358, China
 > 
-> 2. School of Information Science and Engineering, Yunnan Normal University,  Yunan 650500, China
 > 
-> 3. Cyberscience Center, Tohoku University, Sendai-shi 980-8578, Japan
+> 2. Cyberscience Center, Tohoku University, Sendai-shi 980-8578, Japan
 > 
 
 > Corresponding Author: **Qingke Zhang** ， Email: tsingke@sdnu.edu.cn ， Tel :  +86-13953128163

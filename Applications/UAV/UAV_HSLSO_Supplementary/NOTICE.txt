@@ -1,0 +1,3 @@
+Supplementary code for academic verification of the UAV path-planning experiment.
+
+Third-party algorithms or materials, if reused or adapted, remain subject to their original publications and applicable licenses.

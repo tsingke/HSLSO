@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# MATLAB autosave / temporary files
+*.asv
+*.autosave
+*.mexw64
+*.mexmaci64
+*.mexa64
+*.mex
+
+# MATLAB temporary files
+*.mat~
+*.tmp
+
+# PlatLSGO experiment output and runtime caches are ignored by
+# PlatLSGO/.gitignore, which is anchored to the platform root on purpose:
+# PlatLSGO/Algorithms/CCOS/*/rdg/results/ holds decomposition data that the
+# platform needs at runtime and must be kept.

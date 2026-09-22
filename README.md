@@ -1,243 +1,169 @@
 # HSLSO
 
-## Heterogeneous Selection Learning Swarm Optimization (HSLSO) 
+## Heterogeneous Selection Learning Swarm Optimization
 
 **Title**: Heterogeneous selection learning swarm optimization for large-scale global optimization and biological multiple sequence alignment
 
 ```
- Authors：Qingke Zhang*, Guanghui Zhou, Xingchen Dong, Kaitong Fu，Xiaolin Wang， Sichen Tao，Huaxiang Zhang
+Authors: Qingke Zhang*, Guanghui Zhou, Xingchen Dong, Kaitong Fu, Xiaolin Wang, Sichen Tao, Huaxiang Zhang
 ```
-> 1. School of Information Science and Engineering, Shandong Normal University, Jinan 250358, China
-> 
-> 
+
+> 1. School of Computer Science and Artificial Intelligence, Shandong Normal University, Jinan 250358, China
 > 2. Cyberscience Center, Tohoku University, Sendai-shi 980-8578, Japan
-> 
 
-> Corresponding Author: **Qingke Zhang** ， Email: tsingke@sdnu.edu.cn ， Tel :  +86-13953128163
+> Corresponding Author: **Qingke Zhang**, Email: tsingke@sdnu.edu.cn, Tel: +86-13953128163
 
+---
 
-### 1. Introduction
+## 1. Introduction
 
-Large-scale global optimization (LSGO) is difficult due to high dimensionality, complex search spaces, and the risk of premature convergence in swarm methods. This paper proposes Heterogeneous Selection Learning Swarm Optimization (HSLSO), a PSO-based algorithm designed to improve global exploration while maintaining fast convergence. HSLSO introduces (i) a hierarchical selection learning strategy that controls the generation of learning exemplars to preserve population diversity and raise search efficiency, and (ii) a heterogeneous learning mechanism that adaptively adjusts particle update probabilities at different levels to balance exploration and exploitation and reduce premature convergence. Comprehensive tests on the CEC’2010 and CEC’2013 LSGO suites show that HSLSO consistently outperforms advanced PSO variants and recent cooperative coevolution methods, with gains confirmed by standard statistical tests. A real-world study on multiple sequence alignment modeled with Hidden Markov Models further indicates better solution quality than competing metaheuristics. These results highlight HSLSO’s core innovation—combining hierarchical exemplar selection with adaptive, level-aware learning—and demonstrate its effectiveness and scalability for large-scale optimization. The source code of HSLSO is openly available at https://github.com/tsingke/HSLSO.
+Large-scale global optimization (LSGO) is difficult due to high dimensionality, complex search spaces, and the risk of premature convergence in swarm methods. This paper proposes Heterogeneous Selection Learning Swarm Optimization (HSLSO), a PSO-based algorithm designed to improve global exploration while maintaining fast convergence.
 
+HSLSO introduces:
 
-### 2. Schematic Diagram of HSLAO
+- **(i) A hierarchical selection learning strategy** that controls the generation of learning exemplars, to preserve population diversity and raise search efficiency.
+- **(ii) A heterogeneous learning mechanism** that adaptively adjusts particle update probabilities at different levels, to balance exploration and exploitation and reduce premature convergence.
+
+Comprehensive tests on the CEC'2010 and CEC'2013 LSGO suites show that HSLSO consistently outperforms advanced PSO variants and recent cooperative coevolution methods, with gains confirmed by standard statistical tests. A real-world study on multiple sequence alignment modeled with Hidden Markov Models further indicates better solution quality than competing metaheuristics.
+
+### Schematic diagram of HSLSO
 
 <img width="414" height="345" alt="image" src="https://github.com/user-attachments/assets/04659f99-634e-4b52-84a2-b768e8dedc87" />
 
 <img width="481" height="330" alt="image" src="https://github.com/user-attachments/assets/ee1508ae-32a6-480d-bdd3-6ac7c98f0ceb" />
 
-
-### 3. The pseudocode of HSLSO optimizer
+### Pseudocode of the HSLSO optimizer
 
 <img width="602" height="285" alt="image" src="https://github.com/user-attachments/assets/06072750-adcb-4c7e-9e24-cd6d14f2a492" />
 
+---
 
-### 4. The MATLAB code of HSLSO
-```MATLAB
-% =========================================================================
-%  HSLSO: Heterogeneous Selection Learning Swarm Optimization (for LSGO)
-%  Copyright (c) 2026, Qingke Zhang @ SDNU CILab
-%  This code is released for academic and research use.
-%  Please cite the related paper when using or modifying.
-% =========================================================================
-%  Function
-%     [gbestX, gbestFitness, gbestHistory] = HSLSO(popsize, dimension, xmax, xmin, maxiter, Func, FuncId, opts)
-%
-%  Inputs
-%     popsize    : population size (e.g., 400)
-%     dimension  : decision dimension
-%     xmax, xmin : box constraints (scalar or 1-by-D vectors)
-%     maxiter    : maximum iterations (MaxFEs = popsize * maxiter)
-%     Func       : function handle, f = Func(x, FuncId); x is column vector
-%     FuncId     : benchmark/problem id passed to Func
-%     opts       : (optional) struct with fields:
-%                  .NLayers  (default: 10)         number of hierarchy layers
-%                  .phi      (default: 0.3)        second-exemplar weight
-%                  .verbose  (default: true)       print progress
-%                  .seed     (default: [])         rng seed (e.g., 42)
-%                  .vmaxRate (default: 0.2)        vmax = vmaxRate*(xmax-xmin)
-%
-%  Outputs
-%     gbestX        : best solution found (1-by-D)
-%     gbestFitness  : best fitness value
-%     gbestHistory  : best-so-far curve over FEs (length = MaxFEs)
-% =========================================================================
-function [gbestX, gbestFitness, gbestHistory] = HSLSO(popsize, dimension, xmax, xmin, maxiter, Func, FuncId, opts)
-
-    % -------------------------
-    % Parameters & preparation
-    % -------------------------
-    if nargin < 8 || isempty(opts), opts = struct(); end
-    NLayers  = getOpt(opts, 'NLayers', 10);
-    phi      = getOpt(opts, 'phi', 0.3);
-    verbose  = getOpt(opts, 'verbose', true);
-    seed     = getOpt(opts, 'seed', []);
-    vmaxRate = getOpt(opts, 'vmaxRate', 0.2);
-
-    if ~isempty(seed), rng(seed); end
-
-    MaxFEs = popsize * maxiter;
-    ComputeFitness = Func;
-
-    % Broadcast bounds if scalar
-    if isscalar(xmax), xmax = repmat(xmax, 1, dimension); end
-    if isscalar(xmin), xmin = repmat(xmin, 1, dimension); end
-
-    % Velocity bounds (fraction of search range)
-    vmag  = vmaxRate * (xmax - xmin);
-    vmax  =  vmag;
-    vmin  = -vmag;
-
-    % Layering
-    N = NLayers;
-    m = floor(popsize / N);                  % individuals per layer
-    if m * N ~= popsize
-        % enforce exact layering by truncating tail; or pad if desired
-        popsize = m * N;
-        if verbose
-            fprintf('[HSLSO] popsize adjusted to %d for %d uniform layers.\n', popsize, N);
-        end
-    end
-
-    % Probability schedule for heterogeneous learning (layer-wise)
-    PLinit = (1:N) / N;
-    PLfina = 1 - PLinit;
-
-    % -------------------------
-    % Initialization
-    % -------------------------
-    P  = xmin + (xmax - xmin) .* rand(popsize, dimension);   % positions
-    V  = vmin + (vmax - vmin) .* rand(popsize, dimension);   % velocities
-    F  = zeros(popsize, 1);
-
-    FEs = 0;
-    for i = 1:popsize
-        F(i) = ComputeFitness(P(i, :)', FuncId);
-    end
-    FEs = FEs + popsize;
-
-    Pbest        = P;
-    PbestFitness = F;
-
-    [gbestFitness, id] = min(F);
-    gbestX = P(id, :);
-    gbestHistory = gbestFitness * ones(MaxFEs, 1);
-    gbestHistory(1:FEs) = gbestFitness;
-
-    % -------------------------
-    % Main loop
-    % -------------------------
-    while FEs < MaxFEs
-
-        % ---- Rank & layer assignment (ascending fitness) ----
-        [F, rank]       = sort(F);
-        P               = P(rank, :);
-        V               = V(rank, :);
-        Pbest           = Pbest(rank, :);
-        PbestFitness    = PbestFitness(rank);
-
-        % ---- Heterogeneous selection-learning by layers ----
-        for sub = 2:N        % the best layer (sub==1) remains as elite buffer
-            PL = PLinit(sub) + (PLfina(sub) - PLinit(sub)) * (FEs / MaxFEs);
-
-            for k = 1:m
-                if rand < PL
-                    idx = (sub - 1) * m + k;
-
-                    % ----- Choose learning exemplars (hierarchical selection) -----
-                    if sub == 2
-                        % learn from the top layer only
-                        aLayer = 1; bLayer = 1;
-                    else
-                        % learn from two layers within the upper hierarchy
-                        k_layers = ceil((sub - 1) * (1 - (FEs / MaxFEs)^2));
-                        k_layers = max(k_layers, 2);
-                        rr = randperm(k_layers, 2);
-                        aLayer = min(rr); bLayer = max(rr);
-                    end
-
-                    % random exemplars within chosen layers (use pbest)
-                    aIdx = (aLayer - 1) * m + randi(m);
-                    bIdx = (bLayer - 1) * m + randi(m);
-                    learnA = Pbest(aIdx, :);
-                    learnB = Pbest(bIdx, :);
-
-                    % ----- Velocity & position update (level-aware heterogeneity) -----
-                    r1 = rand(1, dimension);
-                    r2 = rand(1, dimension);
-                    r3 = rand(1, dimension);
-
-                    V(idx, :) = r1 .* V(idx, :) ...
-                              + r2 .* (learnA - P(idx, :)) ...
-                              + phi * r3 .* (learnB - P(idx, :));
-
-                    % clamp velocity
-                    V(idx, :) = max(min(V(idx, :), vmax), vmin);
-
-                    % position update + box constraints
-                    P(idx, :) = P(idx, :) + V(idx, :);
-                    P(idx, :) = max(min(P(idx, :), xmax), xmin);
-
-                    % evaluate
-                    F(idx) = ComputeFitness(P(idx, :)', FuncId);
-                    FEs = FEs + 1;
-
-                    % personal best
-                    if F(idx) < PbestFitness(idx)
-                        PbestFitness(idx) = F(idx);
-                        Pbest(idx, :)     = P(idx, :);
-                    end
-
-                    % global best
-                    if F(idx) < gbestFitness
-                        gbestFitness = F(idx);
-                        gbestX       = P(idx, :);
-                    end
-
-                    % history
-                    if FEs <= MaxFEs
-                        gbestHistory(FEs) = gbestFitness;
-                    end
-
-                    if verbose && mod(FEs, 1000) == 0
-                        fprintf('[HSLSO] FEs=%8d | gbest=%.8e\n', FEs, gbestFitness);
-                    end
-
-                    if FEs >= MaxFEs
-                        break;
-                    end
-                end
-            end
-            if FEs >= MaxFEs
-                break;
-            end
-        end
-    end
-
-    % fill tail (if early exits happen exactly at MaxFEs, this is a no-op)
-    if FEs < MaxFEs
-        gbestHistory(FEs+1:MaxFEs) = gbestFitness;
-    end
-end
-
-% =========================
-% Helpers (local functions)
-% =========================
-function val = getOpt(s, name, defaultVal)
-    if isfield(s, name) && ~isempty(s.(name))
-        val = s.(name);
-    else
-        val = defaultVal;
-    end
-end
-
+## 2. Repository structure
 
 ```
-## 5. Acknowledgements
+HSLSO/
+├── HSLSO.m                             Standalone copy — cleanest form, runs on your own objective
+├── HSLSO_witheq.m                      Same, with the paper's Eq. (4)–(7) marked in the comments
+├── PlatLSGO/                           Benchmark platform — the code behind the paper's experiments
+│   ├── config.m                        All experiment settings in one place
+│   ├── run_demo.m                      Self-check: HSLSO on one function, one run
+│   ├── run_CEC2010.m                   Full CEC2010 suite (F1–F20)
+│   ├── run_CEC2013.m                   Full CEC2013 suite (F1–F15)
+│   ├── main.m                          Both suites back to back
+│   ├── core/                           Platform plumbing: paths, run loop, result summaries
+│   ├── benchmarks/                     CEC2010 / CEC2013 objective functions, plus docs/
+│   ├── input_data_10_LSGO/             CEC2010 data — loaded by relative path, keep the layout
+│   ├── input_data_13_LSGO/             CEC2013 data
+│   ├── Algorithms/                     22 algorithms behind one interface, plus MDG/ grouping data
+│   │   ├── HSLSO/                      The proposed algorithm as the platform calls it
+│   │   └── …                           the 21 comparison algorithms
+│   └── results/                        Run output, one folder per suite
+└── Applications/                       Two case studies
+    ├── MSA/HSLSO_MSA_SPS/              Multiple sequence alignment
+    └── UAV/UAV_HSLSO_Supplementary/    UAV 3-D path planning
+```
 
-**We would like to express our sincere gratitude to editors and the anonymous reviewers for taking the time to review our paper.** 
+- **`HSLSO.m`** (197 lines) — the algorithm in a clean, self-contained form, runnable on your own objective.
+- **`HSLSO_witheq.m`** (203 lines) — the same algorithm with the paper's Eq. (4)–(7) marked in the comments. Read this one next to the paper.
+- **`PlatLSGO/Algorithms/HSLSO/HSLSO.m`** (118 lines) — the copy the platform actually calls, written to the platform's shared interface so HSLSO can be swapped for any comparison algorithm.
 
-This work is supported by the National Natural Science Foundation of China (Grant Nos. 62006144) 
+All three are kept deliberately: the first two are for reading, the third is for reproducing the experiments. `PlatLSGO/` and `Applications/` each have their own README with the full layout and details.
 
+---
 
+## 3. Quick start
+
+**Requirements:** MATLAB (tested with R2025b). No toolbox is needed for the LSGO benchmark or the UAV application; the MSA application needs the Bioinformatics Toolbox.
+
+The fastest way to confirm a working setup is the platform self-check, which runs HSLSO once on a single benchmark function:
+
+```matlab
+cd PlatLSGO
+run_demo
+```
+
+It prints the elapsed time of one run, which is what you need to extrapolate the cost of a full experiment. See `PlatLSGO/README.md` for the full experiment scripts.
+
+---
+
+## 4. Reproducing the paper's experiments
+
+Everything lives under `PlatLSGO/`; its README has the complete documentation.
+
+```matlab
+cd PlatLSGO
+run_CEC2010     % CEC2010 suite, F1–F20
+run_CEC2013     % CEC2013 suite, F1–F15
+main            % both suites back to back
+```
+
+CEC2010 (F1–F20) and CEC2013 (F1–F15), D = 1000, MaxFEs = 3e6 per run, 30 independent runs. A suite is a multi-week job on one machine, so run `run_demo` first to measure a single run on your own hardware.
+
+### Comparison algorithms
+
+HSLSO is compared against **21 algorithms**. Each is a folder under `PlatLSGO/Algorithms/`, all reached through the same interface; `PlatLSGO/Algorithms/MDG/` holds the decomposition data that `DECC_MDG` reads. Swarm sizes and references are tabulated in [`PlatLSGO/README.md`](PlatLSGO/README.md).
+
+| Comparison algorithms | | | | | | |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| TPCSO | HCLPSO | SCLDPSO | DCSO | WGA | CSO | SLPSO |
+| APSO_DEE | EAPSO | CCOS | DECC_MDG | LLSO | DLLSO | RLLPSO |
+| AHLSO | PCLSO | DPCLSO | RCIPSO | DECC_DG2 | MOS | MLSHADE_SPA |
+
+**HSLSO** is the proposed algorithm; the 21 entries above are the baselines it is compared against.
+
+---
+
+## 5. Applications
+
+### 5.1 Multiple sequence alignment — `Applications/MSA/HSLSO_MSA_SPS/`
+
+Sequence alignment scored through a profile Hidden Markov Model, optimized with HSLSO against `SLPSO`, `CSO`, `WGA`, `EAPSO`, `APSO-DEE`, `DE` and `EO`.
+
+```matlab
+cd Applications/MSA/HSLSO_MSA_SPS
+run_MSA_SPS     % set dataset / algorithm / maxiter at the top of the script
+```
+
+Eight A/C/G/T-only DNA datasets are included. **Requires the MATLAB Bioinformatics Toolbox** (`fastaread`).
+
+### 5.2 UAV 3-D path planning — `Applications/UAV/UAV_HSLSO_Supplementary/`
+
+Terrain-aware UAV path planning with HSLSO against `SCLDPSO`, `EAPSO`, `SLPSO` and `CSO`.
+
+```matlab
+cd Applications/UAV/UAV_HSLSO_Supplementary
+run_UAV_comparison
+```
+
+The terrain is generated synthetically under a fixed seed, so no external dataset is needed.
+
+---
+
+## 6. Citation
+
+If you use this code, please cite the paper:
+
+```bibtex
+@article{zhanghslso,
+  title   = {Heterogeneous selection learning swarm optimization for large-scale
+             global optimization and biological multiple sequence alignment},
+  author  = {Zhang, Qingke and Zhou, Guanghui and Dong, Xingchen and Fu, Kaitong
+             and Wang, Xiaolin and Tao, Sichen and Zhang, Huaxiang},
+  journal = {Swarm and Evolutionary Computation},
+  note    = {under revision}
+}
+```
+
+The bibliographic details will be updated once the paper is published.
+
+---
+
+## 7. License and acknowledgements
+
+This project is released under the MIT License — see [`LICENSE`](LICENSE).
+
+The 21 comparison algorithms under `PlatLSGO/Algorithms/` are the original authors' reference implementations, reproduced as published, and files that carry their own header and license keep it; see `PlatLSGO/README.md` §"Third-party code". We thank the authors for making them available.
+
+**We would like to express our sincere gratitude to the editors and the anonymous reviewers for taking the time to review our paper.**
+
+This work is supported by the National Natural Science Foundation of China (Grant Nos. 62006144).

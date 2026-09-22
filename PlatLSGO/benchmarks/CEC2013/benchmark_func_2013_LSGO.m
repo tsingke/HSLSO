@@ -2,7 +2,7 @@
 %INPUTS:
 % x:       the decision vector to the objective function in form of a column vector
 %          it can also be a matrix where each column represent a decision
-%          vector.x接受的必须是列向量，每一列表示一个个体，即列向量为一个个体
+%          vector. x must be a column vector; each column is one individual, that is, a column vector represents one individual
             
 %
 %func_num: the index of the objective function to be evaluated ranging [1,15].

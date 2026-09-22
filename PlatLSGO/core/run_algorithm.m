@@ -8,11 +8,11 @@ switch upper(name)
     case 'AHLSO'
         addpath(algDir);
         c = onCleanup(@() rmpath(algDir));
-        [bestX,bestFitness,bestHistory] = zAHLSO([],popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId,[]);
+        [bestX,bestFitness,bestHistory] = zAHLSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId);
     case 'DCSO'
         addpath(algDir);
         c = onCleanup(@() rmpath(algDir));
-        [bestX,bestFitness,bestHistory] = D_CSO([],popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId,[]);
+        [bestX,bestFitness,bestHistory] = D_CSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId);
     case 'CCOS'
         [bestX,bestFitness,bestHistory] = run_ccos(suite,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId);
     case 'DECC_MDG'
@@ -20,11 +20,11 @@ switch upper(name)
         mdgCleanup = check_mdg_data(suite,funcId); %#ok<NASGU>
         addpath(algDir);
         c = onCleanup(@() rmpath(algDir));
-        [bestX,bestFitness,bestHistory] = DECC_MDG([],popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId,[]);
+        [bestX,bestFitness,bestHistory] = DECC_MDG(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId);
     otherwise
         addpath(algDir);
         c = onCleanup(@() rmpath(algDir));
         funName = name;
-        [bestX,bestFitness,bestHistory] = feval(funName,[],popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId,[]);
+        [bestX,bestFitness,bestHistory] = feval(funName,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId);
 end
 end

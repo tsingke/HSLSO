@@ -27,34 +27,34 @@
 %
 % ------
 function [groups,groups_perturb,FEs]=mergeGroup(fun,fun_number,options,dims,fp1,perturbed_values)
-    % dims存储了全部不可分离变量
-    % fp1为全是下限值的适应度值
-    % 在第i维加入了扰动的适应度值存储在perturbed_values内，无需重复计算
-    dim=options.dim;% 这里的dim为总体维度
+    % dims stores all the non-separable variables
+    % fp1 is the fitness value with all the variables at their lower bounds
+    % The fitness values with a perturbation added at the i-th dimension are stored in perturbed_values, so there is no need to recompute them
+    dim=options.dim;% Here dim is the overall dimensionality
     base=options.base;
     sigma=options.sigma;
     FEs=0;
-    dim_len=length(dims);% 计算不可分离变量个数
-    groups={};% 用于记录所有的不可分变量集合
+    dim_len=length(dims);% Compute the number of non-separable variables
+    groups={};% Used to record all the sets of non-separable variables
     
-    %% 如果仅有一个或者两个不可分离变量
+    %% If there is only one or two non-separable variables
     if(dim_len==1 || dim_len==2) 
-        %一个不可分离变量，直接返回
+        %A single non-separable variable, return directly
         if(dim_len==1)
-            groups_perturb=perturbed_values(dims);% 该组添加扰动后的函数值
+            groups_perturb=perturbed_values(dims);% The function value of this group after the perturbation is added
             groups{1}=dims;
-        else% 两个不可分离变量，判断他们是否交互，只有两个不可分离变量还会不交互吗？
-            p=base * ones(1,dim);% 置为下限值
-            p(dims)=base+sigma;% 置为上限值
-            fp=feval(fun,p,fun_number);% 计算适应度
+        else% Two non-separable variables: determine whether they interact. With only two non-separable variables, can they still be non-interacting?
+            p=base * ones(1,dim);% Set to the lower bound
+            p(dims)=base+sigma;% Set to the upper bound
+            fp=feval(fun,p,fun_number);% Compute the fitness
             FEs=FEs+1;
             
             delta1=perturbed_values(dims(1))-fp1;
             delta2=fp-perturbed_values(dims(2));
             epsilon=epsilonCalculate(fp1,perturbed_values(dims(1)),perturbed_values(dims(2)),fp,dim);
             
-            groups_perturb=fp;% 不可分离变量组含有的两个决策变量都加入扰动后的值
-            if (abs(delta1-delta2)<epsilon) % 说明不交互，则分为两个组
+            groups_perturb=fp;% The value after adding the perturbation to both decision variables contained in the non-separable variable group
+            if (abs(delta1-delta2)<epsilon) % No interaction, so it is divided into two groups
                 groups{1}=dims(1);
                 groups{2}=dims(2);
             else
@@ -65,25 +65,25 @@ function [groups,groups_perturb,FEs]=mergeGroup(fun,fun_number,options,dims,fp1,
     end
     
     %% The variable set dims is divided into two subsets
-    median=floor(dim_len/2); % 计算中间值
-    Ldims=dims(1:median);% 将dims分为两个大小相等且互斥的子集
+    median=floor(dim_len/2); % Compute the middle value
+    Ldims=dims(1:median);% Divide dims into two equally sized and mutually exclusive subsets
     Rdims=dims(median+1:dim_len);
     
-    %Two subsets are grouped separately 递归调用
+    %Two subsets are grouped separately, recursive call
     [Lgroups,Lgroups_perturb,LFEs]=mergeGroup(fun,fun_number,options,Ldims,fp1,perturbed_values);
     [Rgroups,Rgroups_perturb,RFEs]=mergeGroup(fun,fun_number,options,Rdims,fp1,perturbed_values);
     
     FEs=LFEs+RFEs;
-    L_gnum=size(Lgroups,2); % 记录含有几个不可分离变量组
+    L_gnum=size(Lgroups,2); % Record how many non-separable variable groups are contained
     R_gnum=size(Rgroups,2);
     
     %% Merge non-separable subsets between two subset groups
     %Determine whether there is an interaction between two subset groups
-    Lfp=Lgroups_perturb; % 记录分组扰动后的适应度值
+    Lfp=Lgroups_perturb; % Record the fitness value after the group perturbation
     Rfp=Rgroups_perturb;
     
     p=base * ones(1,dim);
-    p(dims)=base+sigma;% 所有的不可分离变量全部加入扰动
+    p(dims)=base+sigma;% Add the perturbation to all the non-separable variables
     fp=feval(fun,p,fun_number);
     FEs=FEs+1;
     
@@ -93,16 +93,16 @@ function [groups,groups_perturb,FEs]=mergeGroup(fun,fun_number,options,dims,fp1,
     groups_perturb=fp;
     
     
-    % 如果两个子树之间存在交互
+    % If there is an interaction between the two subtrees
     if(abs(delta1-delta2)>epsilon) 
-        if(L_gnum==1&&R_gnum==1) % 如果左右自己中都只含一个变量，则直接合并
+        if(L_gnum==1&&R_gnum==1) % If both the left and the right subtree contain only one variable, merge them directly
             Rgroups{1}=[Lgroups{1} Rgroups{1}];
             groups=Rgroups;
             return ; 
         end
         
         %First find out the subset of the left subset group that interacts with the right subset group
-        % 若左右子树里面存在不止一个变量则继续判断
+        % If there is more than one variable in the left and right subtrees, continue the test
         [Lgroup,LgroupIndexs,~,FE]=biSearch(fun,fun_number,options,Rdims',fp1,Rfp,fp,Lgroups,Lfp);
         FEs=FEs+FE;
         if(~isempty(LgroupIndexs))

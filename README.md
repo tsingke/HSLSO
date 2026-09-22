@@ -42,8 +42,7 @@ Comprehensive tests on the CEC'2010 and CEC'2013 LSGO suites show that HSLSO con
 
 ```
 HSLSO/
-├── HSLSO.m                             Standalone copy — cleanest form, runs on your own objective
-├── HSLSO_witheq.m                      Same, with the paper's Eq. (4)–(7) marked in the comments
+├── HSLSO.m                             The algorithm, standalone — parameters set inside the file
 ├── PlatLSGO/                           Benchmark platform — the code behind the paper's experiments
 │   ├── config.m                        All experiment settings in one place
 │   ├── run_demo.m                      Self-check: HSLSO on one function, one run
@@ -63,11 +62,10 @@ HSLSO/
     └── UAV/UAV_HSLSO_Supplementary/    UAV 3-D path planning
 ```
 
-- **`HSLSO.m`** (197 lines) — the algorithm in a clean, self-contained form, runnable on your own objective.
-- **`HSLSO_witheq.m`** (203 lines) — the same algorithm with the paper's Eq. (4)–(7) marked in the comments. Read this one next to the paper.
-- **`PlatLSGO/Algorithms/HSLSO/HSLSO.m`** (118 lines) — the copy the platform actually calls, written to the platform's shared interface so HSLSO can be swapped for any comparison algorithm.
+- **`HSLSO.m`** (225 lines) — the algorithm standalone, runnable on your own objective. Population size and evaluation budget are set inside the file, and the numbered comment sections tie the main steps to the paper's equations.
+- **`PlatLSGO/Algorithms/HSLSO/HSLSO.m`** (225 lines) — the copy the platform actually calls, written to the platform's shared interface so HSLSO can be swapped for any comparison algorithm.
 
-All three are kept deliberately: the first two are for reading, the third is for reproducing the experiments. `PlatLSGO/` and `Applications/` each have their own README with the full layout and details.
+The two are identical — same parameter list, same algorithm body — so either can be used as a drop-in comparison algorithm on the platform. The first is for reading, the second is for reproducing the experiments. `PlatLSGO/` and `Applications/` each have their own README with the full layout and details.
 
 ---
 
@@ -162,7 +160,7 @@ The bibliographic details will be updated once the paper is published.
 
 This project is released under the MIT License — see [`LICENSE`](LICENSE).
 
-The 21 comparison algorithms under `PlatLSGO/Algorithms/` are the original authors' reference implementations, reproduced as published, and files that carry their own header and license keep it; see `PlatLSGO/README.md` §"Third-party code". We thank the authors for making them available.
+The 21 comparison algorithms under `PlatLSGO/Algorithms/` are the original authors' reference implementations, ported to the platform's common interface; their search logic is unchanged, and files that carry their own header and license keep it. See `PlatLSGO/README.md` §"Third-party code" for the three changes made across those files. We thank the authors for making them available.
 
 **We would like to express our sincere gratitude to the editors and the anonymous reviewers for taking the time to review our paper.**
 

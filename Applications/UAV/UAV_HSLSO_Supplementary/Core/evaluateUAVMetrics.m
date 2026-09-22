@@ -7,7 +7,7 @@ function M = evaluateUAVMetrics(path, startPos, goalPos, X, Y, Z, P)
 
     M.Lp = sum(vecnorm(diffP, 2, 2));
 
-    %% 平均转角 / 最大转角
+    %% Mean turn angle / max turn angle
     if size(fullPath,1) >= 3
         v1 = diffP(1:end-1,:);
         v2 = diffP(2:end,:);
@@ -27,12 +27,12 @@ function M = evaluateUAVMetrics(path, startPos, goalPos, X, Y, Z, P)
         M.kappa_max = NaN;
     end
 
-    %% 爬升
+    %% Climb
     climb = abs(diffP(:,3));
     M.climb_avg = mean(climb);
     M.climb_max = max(climb);
 
-    %% 净空与违规率
+    %% Clearance and violation rate
     nSeg = size(fullPath,1) - 1;
 
     min_clear = inf;

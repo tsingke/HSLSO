@@ -4,43 +4,43 @@ function [gbestX,gbestfitness,gbesthistory]=GTDE_tag(popsize,dimension,xmax,xmin
 
 FEs=0;
 MaxFEs=10000*dimension;
-if dimension>=500  %CEC2010测试集定义1000维(CEC 2013 F13,F14函数是905维)问题的MaxFEs=3E6（阈值自己定，只要检测出是大规模问题就行）
+if dimension>=500  %The CEC2010 suite defines a 1000-D problem (CEC 2013 functions F13 and F14 are 905-D), for which MaxFEs=3E6 (the threshold is chosen by the user, as long as the problem is detected as large-scale)
 MaxFEs=3E6;
 end
 gbestfitness=inf;
 
-x=rand(popsize,dimension); %位置向量
-v=rand(popsize,dimension); %变异向量
-u=rand(popsize,dimension); %试验向量
+x=rand(popsize,dimension); %position vector
+v=rand(popsize,dimension); %mutation vector
+u=rand(popsize,dimension); %trial vector
 
 
-% 适应度空间分配
-fitnessx= rand(1,popsize); % 群体适应度
+% Fitness space allocation
+fitnessx= rand(1,popsize); % population fitness
 
 Pm=0.01;
 NGT=400;
 
 ComputeFitness=Func;
 
-% 加载变量分组结果（ERDG）
-% 暂时只测cec2013
+% Load the variable grouping result (ERDG)
+% Only cec2013 is tested for now
 groupFilePath = strcat('./','CEC2013LSGO','/GroupResult/', 'ERDG');
 groupFile = strcat(groupFilePath, '/f', num2str(FuncId), '_groups.mat');
 load(groupFile, '-mat', 'groups', 'fEvalNum');    
 
 FEs = FEs+fEvalNum;
 
-% 对得到的分组结果进行处理
+% Process the obtained grouping result
 groups = preparationgroups(groups);
 
-% 组数
+% number of groups
 groupN = size(groups,1);
-deltaFit = zeros(groupN,1); % 用来保存变量组贡献度
+deltaFit = zeros(groupN,1); % used to store the contribution of each variable group
 
-%% 种群初始化
+%% Population initialization
 for i =1:popsize
     x(i,:)=xmin+(xmax-xmin).*rand(1,dimension);
-    fitnessx(i)= ComputeFitness(x(i,:)',FuncId); % 个体适应度
+    fitnessx(i)= ComputeFitness(x(i,:)',FuncId); % individual fitness
     FEs=FEs+1;
     if gbestfitness>fitnessx(i)
         gbestfitness=fitnessx(i);
@@ -48,23 +48,23 @@ for i =1:popsize
         idx = i;
     end
     gbesthistory(FEs)=gbestfitness;
-    fprintf("GTDE 第%d次评价，最佳适应度 = %e\n",FEs,gbestfitness);
+    fprintf("GTDE  FE %d  best = %e\n",FEs,gbestfitness);
 end
 
 for m = 1:groupN
     dims = groups{m};
     gbestfitnessbefore = gbestfitness;
-    % 子维度组贡献值初始化
-    for k=1:NGT   %算法1
+    % Initialize the contribution value of the sub-dimension group
+    for k=1:NGT   %Algorithm 1
         Pj=normrnd(ones(1,length(dims))*0.01,ones(1,length(dims))*0.01);
-        bottleneck=rand(1,length(dims))<Pj;  %返回逻辑值，用1标记瓶颈维度，0表示非瓶颈维度
+        bottleneck=rand(1,length(dims))<Pj;  %Returns logical values: 1 marks a bottleneck dimension, 0 marks a non-bottleneck dimension
         F=normrnd(0.5,0.1);
         r=[];
         r=selectID(popsize,i,2);
         r1=r(1);
         r2=r(2);
         
-        for j=1:length(dims) %算法2
+        for j=1:length(dims) %Algorithm 2
             if rand<Pm
                 xrand=xmin+(xmax-xmin)*rand;
                 v(idx,dims(j))=gbestX(dims(j))+F*(x(r1,dims(j))-xrand);
@@ -78,16 +78,16 @@ for m = 1:groupN
         v(idx,:)=(v(idx,:).*(~(Flag4ub+Flag4lb)))+(xmin+(xmax-xmin)*rand(1,dimension)).*Flag4ub+(xmin+(xmax-xmin)*rand(1,dimension)).*Flag4lb;
         
         newgbestX=gbestX;
-        newgbestX(dims(bottleneck))=v(idx,dims(bottleneck));  %算法3
+        newgbestX(dims(bottleneck))=v(idx,dims(bottleneck));  %Algorithm 3
         newgbestfitness=ComputeFitness(newgbestX',FuncId);
         FEs=FEs+1;
         if newgbestfitness<=gbestfitness
             gbestfitness=newgbestfitness;
             gbestX=newgbestX;
-            x(idx,:)=gbestX; %我觉得还有这句，不然全局最优不会放入种群中，造成x(i,:)和gbestX很难相等(对全局最优的操作将很难进行)
+            x(idx,:)=gbestX; %I think this line is also needed, otherwise the global best is not placed into the population, which makes x(i,:) and gbestX rarely equal (and makes operations on the global best very difficult)
         end
         gbesthistory(FEs)=gbestfitness;
-        fprintf("GTDE 第%d次评价，最佳适应度 = %e\n",FEs,gbestfitness);
+        fprintf("GTDE  FE %d  best = %e\n",FEs,gbestfitness);
     end
     deltaFit(m) = gbestfitnessbefore - gbestfitness;
 
@@ -96,23 +96,23 @@ end
 while 1
     for i =1:popsize
         
-        if isequal(x(i,:),gbestX)  %针对最佳个体(如果i是最佳个体)
+        if isequal(x(i,:),gbestX)  %For the best individual (if i is the best individual)
 
-            % 选择进行靶向的分组
+            % Select the group to be targeted
             [~,mid] = max(deltaFit); 
             dims = groups{mid};
             gbestfitnessbefore = gbestfitness;
             
-            for k=1:NGT   %算法1
+            for k=1:NGT   %Algorithm 1
                 Pj=normrnd(ones(1,length(dims))*0.01,ones(1,length(dims))*0.01);
-                bottleneck=rand(1,length(dims))<Pj;  %返回逻辑值，用1标记瓶颈维度，0表示非瓶颈维度
+                bottleneck=rand(1,length(dims))<Pj;  %Returns logical values: 1 marks a bottleneck dimension, 0 marks a non-bottleneck dimension
                 F=normrnd(0.5,0.1);
                 r=[];
                 r=selectID(popsize,i,2);
                 r1=r(1);
                 r2=r(2);
                 
-                for j=1:length(dims) %算法2
+                for j=1:length(dims) %Algorithm 2
                     if rand<Pm
                         xrand=xmin+(xmax-xmin)*rand;
                         v(idx,dims(j))=gbestX(dims(j))+F*(x(r1,dims(j))-xrand);
@@ -126,22 +126,22 @@ while 1
                 v(i,:)=(v(i,:).*(~(Flag4ub+Flag4lb)))+(xmin+(xmax-xmin)*rand(1,dimension)).*Flag4ub+(xmin+(xmax-xmin)*rand(1,dimension)).*Flag4lb;
                 
                 newgbestX=gbestX;
-                newgbestX(dims(bottleneck))=v(i,dims(bottleneck));  %算法3
+                newgbestX(dims(bottleneck))=v(i,dims(bottleneck));  %Algorithm 3
                 newgbestfitness=ComputeFitness(newgbestX',FuncId);
                 FEs=FEs+1;
                 if newgbestfitness<=gbestfitness
                     gbestfitness=newgbestfitness;
                     gbestX=newgbestX;
-                    x(i,:)=gbestX; %我觉得还有这句，不然全局最优不会放入种群中，造成x(i,:)和gbestX很难相等(对全局最优的操作将很难进行)
+                    x(i,:)=gbestX; %I think this line is also needed, otherwise the global best is not placed into the population, which makes x(i,:) and gbestX rarely equal (and makes operations on the global best very difficult)
                 end
                 gbesthistory(FEs)=gbestfitness;
-                fprintf("GTDE 第%d次评价，最佳适应度 = %e\n",FEs,gbestfitness);
+                fprintf("GTDE  FE %d  best = %e\n",FEs,gbestfitness);
             end
 
-            % 计算所选分组对适应度的贡献值
+            % Compute the fitness contribution of the selected group
             deltaFit(mid) = gbestfitnessbefore - gbestfitness;
             
-        else  %其他个体
+        else  %Other individuals
             
             F = normrnd(0.7,0.5);
             CR = normrnd(0.5,0.5);
@@ -175,7 +175,7 @@ while 1
                 gbestX= x(i,:);
             end
             gbesthistory(FEs)=gbestfitness;
-            fprintf("GTDE 第%d次评价，最佳适应度 = %e\n",FEs,gbestfitness);
+            fprintf("GTDE  FE %d  best = %e\n",FEs,gbestfitness);
         end
     end
     
@@ -197,33 +197,33 @@ end % end function
 
 %% ---------------------------------------------------------------------
 
-%% 选择不同的函数
+%% Select different functions
 function [r]=selectID(popsize,i,count)
-% 函数功能：在[1,popsizze]内随机生成count个不包括i的彼此不重复的整数值
-% 函数返回： 列向量r，向量的维度为count。
-% 函数思想： 把已经选择的元素，从数组里去除。
+% Function: randomly generate count mutually distinct integers in [1,popsize] that do not include i
+% Returns: a column vector r whose dimension is count.
+% Idea: remove the already selected elements from the array.
 if count<= popsize
-    %1.除去i的值，生成新的向量vec
+    %1. Remove the value i and generate a new vector vec
     vec=[1:i-1,i+1:popsize];
     
-    %2.随机生成count个不一样的数值
+    %2. Randomly generate count distinct values
     r=zeros(1,count);
     
     for j =1:count
-        n = popsize-j;   % 当前vec中向量的个数
-        t = randi(n,1,1);% 产生一个随机整数
-        r(j) = vec(t);   % 取随机数
-        vec(t)=[]; %从数组中删除当前元素,防止某个数再被选择
+        n = popsize-j;   % current number of elements in vec
+        t = randi(n,1,1);% generate a random integer
+        r(j) = vec(t);   % take the random value
+        vec(t)=[]; %remove the current element from the array to prevent it from being selected again
     end
 end
 end
 
-%% 分组结果预处理
+%% Grouping result preprocessing
 function groups = preparationgroups(groups)
 m = size(groups,1);
 
 if m == 1000
-    % 对于完全可分离函数
+    % For fully separable functions
     matgroups = cell2mat(groups);
     length = size(matgroups,1);
     groups = {};
@@ -243,7 +243,7 @@ if m == 1000
     groups = groups';
 
 elseif m == 1
-    % 对于完全不可分离函数
+    % For fully non-separable functions
     matgroups = cell2mat(groups);
     length = size(matgroups,2);
     groups = {};
@@ -263,7 +263,7 @@ elseif m == 1
     groups = groups';
 
 elseif m > 200
-    % 对于完全可分离变量较多的部分可分离函数
+    % For partially separable functions with many fully separable variables
     matgroups = [];
     g = 0;
     for i = 1:m

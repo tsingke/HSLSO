@@ -1,4 +1,4 @@
-% 打分函数SPS
+% Sum-of-pairs (SPS) scoring function
 
 function sopi=SPS(testseq)
 as=testseq;

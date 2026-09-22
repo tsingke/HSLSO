@@ -2,27 +2,27 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 % runEAPSO
 % Elite Archive Particle Swarm Optimizer for UAV Path Planning
 %
-% 输入:
-%   Fitness   : 适应度函数句柄，输入列向量
-%   popsize   : 种群规模
-%   dimension : 决策变量维度
-%   xmax      : 上界
-%   xmin      : 下界
-%   maxiter   : 最大迭代次数
+% INPUTS:
+%   Fitness   : fitness function handle, takes a column vector
+%   popsize   : swarm size
+%   dimension : number of decision variables
+%   xmax      : upper bound
+%   xmin      : lower bound
+%   maxiter   : maximum number of iterations
 %
-% 输出:
-%   bestPath      : decodePath 后的最优路径
-%   gbesthistory  : 每代最优适应度历史
+% OUTPUTS:
+%   bestPath      : optimal path returned by decodePath
+%   gbesthistory  : history of the best fitness per generation
 
-    %% ===================== 1. 参数初始化 =====================
+    %% ===================== 1. Parameter initialization =====================
     FEs = 0;
     MaxFEs = popsize * maxiter;
 
-    % 速度边界，建议不要太大，否则路径规划中容易跳动
+    % Velocity bounds; it is advisable not to make them too large, otherwise the path tends to jump around during planning
     vmax = 0.2 * (xmax - xmin);
     vmin = -vmax;
 
-    % 如果 xmax/xmin 是标量，扩展为行向量
+    % If xmax/xmin is a scalar, expand it to a row vector
     if isscalar(xmax)
         xmax = xmax * ones(1, dimension);
     end
@@ -36,7 +36,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
         vmin = -vmax;
     end
 
-    %% ===================== 2. 初始化种群 =====================
+    %% ===================== 2. Initialize the population =====================
     p = xmin + (xmax - xmin) .* rand(popsize, dimension);
     v = vmin + (vmax - vmin) .* rand(popsize, dimension);
 
@@ -48,16 +48,16 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 
     FEs = FEs + popsize;
 
-    %% ===================== 3. 初始化个体最优和全局最优 =====================
+    %% ===================== 3. Initialize the personal best and the global best =====================
     pbest = p;
     pbestfitness = fitness;
 
     [bestever, id] = min(fitness);
     gbestx = p(id, :);
 
-    %% ===================== 4. 初始化 PART 和 GART 档案 =====================
-    % PART: 历史个体优秀档案
-    % GART: 历史全局优秀档案
+    %% ===================== 4. Initialize the PART and GART archives =====================
+    % PART: archive of historically good personal solutions
+    % GART: archive of historically good global solutions
 
     [~, sort_id] = sort(pbestfitness);
 
@@ -67,7 +67,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
     GART.Position = [];
     GART.Cost = [];
 
-    % PART 初始放入当前最好的两个个体
+    % Put the two currently best individuals into PART at initialization
     PART(1).Position = pbest(sort_id(1), :);
     PART(1).Cost = pbestfitness(sort_id(1));
 
@@ -79,21 +79,21 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
         pcount = 1;
     end
 
-    % GART 初始放入当前全局最优
+    % Put the current global best into GART at initialization
     GART(1).Position = gbestx;
     GART(1).Cost = bestever;
     gcount = 1;
 
-    % 档案最大容量
+    % Maximum archive capacity
     NP = popsize;
 
-    %% ===================== 5. 初始化历史记录 =====================
+    %% ===================== 5. Initialize the history record =====================
     gbesthistory = zeros(1, maxiter);
 
     iter = 1;
     gbesthistory(iter) = bestever;
 
-    %% ===================== 6. 主循环 =====================
+    %% ===================== 6. Main loop =====================
     while FEs < MaxFEs
 
         iter = iter + 1;
@@ -101,7 +101,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
             break;
         end
 
-        %% ---------- 根据个体最优排序 ----------
+        %% ---------- Sort by the personal best ----------
         [~, ind] = sort(pbestfitness);
 
         half = floor(popsize / 2);
@@ -120,7 +120,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 
         loser_cost_mean = mean(pbestfitness(LOSER));
 
-        %% ===================== 7. 更新败者个体 =====================
+        %% ===================== 7. Update the losing individuals =====================
         for ii = 1:length(LOSER)
 
             if FEs >= MaxFEs
@@ -129,7 +129,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 
             loser_idx = LOSER(ii);
 
-            %% ===== 从 PART 中选择较优历史个体 =====
+            %% ===== Select the better historical individual from PART =====
             if length(PART) > 1
                 a = randi(length(PART));
                 b = randi(length(PART));
@@ -145,7 +145,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
                 a = 1;
             end
 
-            %% ===== 从 GART 中选择较优全局历史个体 =====
+            %% ===== Select the better global historical individual from GART =====
             if length(GART) > 1
                 c = randi(length(GART));
                 d = randi(length(GART));
@@ -163,7 +163,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
                 b_gart = 1;
             end
 
-            %% ===== 从 WINNER 中选择较优胜者 =====
+            %% ===== Select the better winner from WINNER =====
             if length(WINNER) > 1
                 c = randi(length(WINNER));
                 q = randi(length(WINNER));
@@ -181,14 +181,14 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 
             winner_idx = WINNER(c);
 
-            %% ===================== 8. EAPSO 核心速度更新 =====================
+            %% ===================== 8. EAPSO core velocity update =====================
             w  = rand(1, dimension);
             F1 = rand(1, dimension);
             F2 = rand(1, dimension);
 
             current_pos = p(loser_idx, :);
 
-            % loser 中相对较好的个体
+            % The relatively better individual among the losers
             if pbestfitness(loser_idx) < loser_cost_mean
 
                 if PART(a).Cost < GART(b_gart).Cost && ...
@@ -223,7 +223,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 
                 end
 
-            % loser 中相对较差的个体
+            % The relatively worse individual among the losers
             else
 
                 if PART(a).Cost > GART(b_gart).Cost && ...
@@ -259,34 +259,34 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
                 end
             end
 
-            %% ===================== 9. 速度边界控制 =====================
+            %% ===================== 9. Velocity boundary control =====================
             v(loser_idx, :) = max(v(loser_idx, :), vmin);
             v(loser_idx, :) = min(v(loser_idx, :), vmax);
 
-            %% ===================== 10. 位置更新 =====================
+            %% ===================== 10. Position update =====================
             p(loser_idx, :) = p(loser_idx, :) + v(loser_idx, :);
 
-            %% ===================== 11. 位置边界控制 =====================
+            %% ===================== 11. Position boundary control =====================
             IsOutside = p(loser_idx, :) < xmin | p(loser_idx, :) > xmax;
 
-            % 越界速度反向
+            % Reverse the velocity when out of bounds
             v(loser_idx, IsOutside) = -v(loser_idx, IsOutside);
 
-            % 位置截断
+            % Truncate the position
             p(loser_idx, :) = max(p(loser_idx, :), xmin);
             p(loser_idx, :) = min(p(loser_idx, :), xmax);
 
-            %% ===================== 12. 适应度评价 =====================
+            %% ===================== 12. Fitness evaluation =====================
             fitness(loser_idx) = Fitness(p(loser_idx, :)');
             FEs = FEs + 1;
 
-            %% ===================== 13. 更新个体最优和 PART =====================
+            %% ===================== 13. Update the personal best and PART =====================
             if fitness(loser_idx) < pbestfitness(loser_idx)
 
                 pbest(loser_idx, :) = p(loser_idx, :);
                 pbestfitness(loser_idx) = fitness(loser_idx);
 
-                % 更新 PART 档案
+                % Update the PART archive
                 pcount = pcount + 1;
 
                 if pcount <= NP
@@ -303,7 +303,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
                         bb = randi(NP);
                     end
 
-                    % 找到较差的档案成员作为替换候选
+                    % Find the worse archive member as the replacement candidate
                     if PART(aa).Cost < PART(bb).Cost
                         replace_idx = bb;
                     else
@@ -317,7 +317,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
                 end
             end
 
-            %% ===================== 14. 更新全局最优 =====================
+            %% ===================== 14. Update the global best =====================
             if pbestfitness(loser_idx) < bestever
                 bestever = pbestfitness(loser_idx);
                 gbestx = pbest(loser_idx, :);
@@ -329,7 +329,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
 
         end
 
-        %% ===================== 15. 更新 GART 档案 =====================
+        %% ===================== 15. Update the GART archive =====================
         gcount = gcount + 1;
 
         if gcount <= NP
@@ -346,7 +346,7 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
                 bb = randi(length(GART));
             end
 
-            % 找到较差的 GART 成员作为替换候选
+            % Find the worse GART member as the replacement candidate
             if GART(aa).Cost < GART(bb).Cost
                 replace_idx = bb;
             else
@@ -359,19 +359,19 @@ function [bestPath, gbesthistory] = runEAPSO(Fitness, popsize, dimension, xmax, 
             end
         end
 
-        %% ===================== 16. 记录当代最优 =====================
+        %% ===================== 16. Record the best of the current generation =====================
         gbesthistory(iter) = bestever;
 
     end
 
-    %% ===================== 17. 补齐历史记录 =====================
+    %% ===================== 17. Fill in the history record =====================
     if iter < maxiter
         gbesthistory(iter+1:maxiter) = bestever;
     elseif iter > maxiter
         gbesthistory(maxiter+1:end) = [];
     end
 
-    %% ===================== 18. 输出最优路径 =====================
+    %% ===================== 18. Output the optimal path =====================
     bestPath = decodePath(gbestx);
 
 end

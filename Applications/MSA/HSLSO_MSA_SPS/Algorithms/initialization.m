@@ -1,4 +1,4 @@
-%EO算法中所用到的函数
+%Function used by the EO algorithm
 
 %_________________________________________________________________________________
 %  Equilibrium Optimizer source code (Developed in MATLAB R2015a)

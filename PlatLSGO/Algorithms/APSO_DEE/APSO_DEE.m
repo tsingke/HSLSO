@@ -1,4 +1,4 @@
-function [gbestX,bestval,trace_val] = APSO_DEE(~,Npop,dim,ub,lb,vmax,vmin,maxiter, fCalculation,funcid,~)
+function [gbestX,bestval,trace_val] = APSO_DEE(Npop,dim,ub,lb,vmax,vmin,maxiter,fCalculation,funcid)
 %Adaptive particle swarm optimizer with decoupling balance for
 %exploration and exploitation (APSO-DEE)
 %Npop: the swarm size
@@ -100,7 +100,7 @@ while fes <= MaxFEs
   
     %         fprintf(['APSO-DEE: The best and FEs of Function ', num2str(funcid), ' (', num2str(run), '):%e'],bestval)
     if mod(fes, floor(MaxFEs/10)) == 0 && fes <= MaxFEs
-        fprintf("APSO-DEE 第%d次评价，最佳适应度 = %e\n",fes,gbestfitness);
+        fprintf("APSO-DEE  FE %d  best = %e\n",fes,gbestfitness);
     end
     gen = gen + 1;
 
@@ -116,7 +116,7 @@ else
 end
 end
 
-% 初始化函数
+% Initialization function
 function [bestval,trace_val,trace_std,Position,Velocity,Fitness,fes] = initialization(lb,ub,Npop,Nvar,fCalculation,funcid)
 %Parameter initialization
 %     MaxFEs = 3000000;
@@ -153,8 +153,8 @@ converg_group(cn,1:work_list) = init_index;
 end
 
 function [Position] = FeasibleFunction(Position,lb,ub)
-%FEASIBLEFUNCTION 此处显示有关此函数的摘要
-%检查候选解的是否在定义范围之内
+%FEASIBLEFUNCTION Summary of this function goes here
+%Check whether the candidate solution lies within the defined range
 Position(Position > ub) = ub;
 Position(Position < lb) = lb;
 end

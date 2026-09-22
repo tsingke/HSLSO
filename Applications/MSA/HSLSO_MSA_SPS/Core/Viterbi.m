@@ -1,20 +1,20 @@
-% HMM模型解码问题Viterbi算法
+% Viterbi algorithm for the HMM decoding problem
 
 function seq=Viterbi(sequence,a,lengthdata,A,B,L)
 [m1,n1]=size(A);
 [m2,n2]=size(B);
-state=['M','I','D'];  %% 隐藏态
-result=['A','T','C','G'];  %% 观测态
+state=['M','I','D'];  %% hidden states
+result=['A','T','C','G'];  %% observation states
 for i=1:m1
    for j=1:n1
-       A(i,j)=A(i,j)/sum(A(i,:));   %% A为转移矩阵(3*m+1)行3列，每一行和为1 
+       A(i,j)=A(i,j)/sum(A(i,:));   %% A is the transition matrix with (3*m+1) rows and 3 columns, each row sums to 1 
    end
 end
-A=A'*10;  %%方便计算
+A=A'*10;  %%for convenience of computation
     
 for i=1:m2
    for j=1:n2
-       B(i,j)=B(i,j)/sum(B(i,:));  %% B为状态生成矩阵(2*m+1)行4列，每一行和为1
+       B(i,j)=B(i,j)/sum(B(i,:));  %% B is the state emission matrix with (2*m+1) rows and 4 columns, each row sums to 1
    end
 end
 B=B*10;
@@ -38,9 +38,9 @@ for l=1:lengthdata
     end
     delta(n1,1)=A(n1);
     
-    %递推delta矩阵剩下值
-    s=ones(3,1)*(a(1,l)-1);  % 插入空格的数量
-    q=ones(3,1)*(L-a(1,l));  % 剩余基因的数量
+    %Recursively fill in the remaining values of the delta matrix
+    s=ones(3,1)*(a(1,l)-1);  % number of inserted gaps
+    q=ones(3,1)*(L-a(1,l));  % number of remaining residues
     delta_j=zeros();
     Psi=zeros();
     Psi(:,1) = 0;
@@ -59,11 +59,11 @@ for l=1:lengthdata
                             t=4;
                        end
                        if j~=3
-                            delta_j(i,1)=delta(i,k-1)*A(i,k*j)*B(k*j,t);   %若不为D，则生成观测态
+                            delta_j(i,1)=delta(i,k-1)*A(i,k*j)*B(k*j,t);   %if the state is not D, an observation is emitted
                        end
                    end
               
-                delta_j(n1,1)=delta(n1,k-1)*A(n1,n1*k);   %若为D，则不生成观测态
+                delta_j(n1,1)=delta(n1,k-1)*A(n1,n1*k);   %if the state is D, no observation is emitted
                 [max_delta_j,psi]=max(delta_j);
                 Psi(j,k)=psi;
                 if psi~=n1
@@ -119,13 +119,13 @@ for l=1:lengthdata
     end     %(for k=2:L)
     
     [P_better,psi_l] = max(delta(:,L));
-    P = P_better; % 最优路径概率
+    P = P_better; % probability of the optimal path
     I = zeros();
     I(L,1) = psi_l;
     s1=a(1,l)-1;
     q=L-a(1,l);
     for t = L-1:-1:1
-        I(t,1) = Psi(I(t+1,1),t+1); %路径回溯得到最优路径
+        I(t,1) = Psi(I(t+1,1),t+1); %backtrack the path to obtain the optimal path
     end
     I=I';
     path=[path;I];

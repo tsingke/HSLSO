@@ -25,20 +25,20 @@
 %
 % ------
 
-% 用6次评估检测三个子集之间的交互
+% Six evaluations are used to detect the interaction among three subsets
 
 function [group,groupIndexs,Rperts,FEs]=biSearch(fun,fun_number,options,left_group,fp1,fp2,fp_iR,Rgroups,Rperts)
-% group：右子树中与左子树的当前子集存在交互的子集
-% groupIndexs：存在交互的子集对应的索引号
-% Rperts：对应二叉树右子树中变量扰动后的适应度值
+% group: the subset in the right subtree that interacts with the current subset of the left subtree
+% groupIndexs: the index of the interacting subset
+% Rperts: the fitness values after perturbing the variables in the right subtree of the binary tree
 
-    base=options.base; % 下限值
+    base=options.base; % lower bound
     sigma=options.sigma;
-    dim=options.dim; % 维度值
+    dim=options.dim; % dimensionality
     FEs=0;
-    R_gnum=size(Rgroups,2); % 右子树中的子组数
+    R_gnum=size(Rgroups,2); % number of subgroups in the right subtree
     Rfp=Rperts(1);          % Perturbation function value of all variables in Rgroups
-    groupsQueue={};         % Save subset groups of the breadth-first traversal strategy 广度优先遍历
+    groupsQueue={};         % Save subset groups of the breadth-first traversal strategy
     dataQueue={};           % Save the function value of the subset groups of the breadth-first traversal strategy
     groupIndexsQueue={};    % Save the index position of the subset in each node in Rgroups
     pQueue={};              % Save the basic decision vector value of the current node
@@ -48,15 +48,15 @@ function [group,groupIndexs,Rperts,FEs]=biSearch(fun,fun_number,options,left_gro
     % fp2:xu,l,l
     % Rfp:xl,u,u
     % fp_iR:xu,u,u
-    groupsQueue={Rgroups}; % 广度优先遍历右子树
-    dataQueue{1}=data; % 广度优先遍历子集的函数值
-    groupIndexsQueue{1}=1:R_gnum; % 右子树中的子集对应位置的索引值
-    pQueue{1}=base * ones(1,dim); % 将当前节点的值全部置为下限值
-    node_orders=1; % 节点顺序为1
-    group={}; % 右子树中与左子树的当前子集存在交互的子集
-    groupIndexs=[]; % 右子树中与左子树的当前子集存在交互子集的索引值
+    groupsQueue={Rgroups}; % Breadth-first traversal of the right subtree
+    dataQueue{1}=data; % Function values of the subsets in the breadth-first traversal
+    groupIndexsQueue{1}=1:R_gnum; % Indices of the corresponding positions of the subsets in the right subtree
+    pQueue{1}=base * ones(1,dim); % Set all the values of the current node to the lower bound
+    node_orders=1; % The node order is 1
+    group={}; % The subset in the right subtree that interacts with the current subset of the left subtree
+    groupIndexs=[]; % Index of the subset in the right subtree that interacts with the current subset of the left subtree
     
-    while(~isempty(groupsQueue)) % 右子树非空时执行此循环
+    while(~isempty(groupsQueue)) % This loop runs while the right subtree is not empty
         %Take out the current team leader
         cur_groups=groupsQueue{1};
         cur_data=dataQueue{1};
@@ -76,13 +76,13 @@ function [group,groupIndexs,Rperts,FEs]=biSearch(fun,fun_number,options,left_gro
         epsilon=epsilonCalculate(cur_data(1),cur_data(2),cur_data(3),cur_data(4),dim);
 %         There is an interaction between the current subset group and left_group, 
 %         and the current subset group is divided into two small subset groups
-        if(abs(delta1-delta2)>epsilon) % 若存在交互
-            cur_gnum=size(cur_groups,2); % 当前右子树中的子组数
+        if(abs(delta1-delta2)>epsilon) % If an interaction exists
+            cur_gnum=size(cur_groups,2); % Number of subgroups in the current right subtree
             if(cur_gnum==1) 
                 group={group{1:end} cur_groups{1}};
                 groupIndexs(end+1)=cur_groupIndexs(1);
-            else % 若当前右子树中的子组数目大于1
-                median=floor(cur_gnum/2); % 当前右子树一分为二
+            else % If the number of subgroups in the current right subtree is greater than 1
+                median=floor(cur_gnum/2); % Split the current right subtree into two
                 groups1=cur_groups(1:median);
                 groupIndexs1=cur_groupIndexs(1:median);
                 p_1=cur_p; % xl,l,l
@@ -102,7 +102,7 @@ function [group,groupIndexs,Rperts,FEs]=biSearch(fun,fun_number,options,left_gro
                 data1=[cur_data(1),cur_data(2),fp_1,fp_i1];
                 % cur_data(1):xl,l,l
                 % cur_data(2):xu,l,l
-                % fp_1:xl,u,l 或 fp_1:xl,u,u
+                % fp_1:xl,u,l or fp_1:xl,u,u
                 % p_i1:xu,u,l
                 groupsQueue{end+1}=groups1; 
                 dataQueue{end+1}=data1;
@@ -113,7 +113,7 @@ function [group,groupIndexs,Rperts,FEs]=biSearch(fun,fun_number,options,left_gro
                 groups2=cur_groups(median+1:cur_gnum);
                 groupIndexs2=cur_groupIndexs(median+1:cur_gnum);
                 data2=[fp_1,fp_i1,cur_data(3),cur_data(4)];
-                % fp_1:xl,u,l 或 fp_1:xl,u,u
+                % fp_1:xl,u,l or fp_1:xl,u,u
                 % p_i1:xu,u,l
                 % cur_data(3):xl,u,u
                 % cur_data(4):xu,u,u

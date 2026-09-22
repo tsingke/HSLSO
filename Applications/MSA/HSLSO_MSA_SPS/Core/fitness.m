@@ -1,4 +1,4 @@
-% HMM模型和MSA封装成的适应度函数
+% Fitness function wrapping the HMM model and the MSA
 
 function T = fitness(seq,a,lengthdata,L,data)
     A=data(:,1:3*(3*L+1));

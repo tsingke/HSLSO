@@ -38,29 +38,29 @@ global UAV_CTX;
 UAV_CTX.X = X;
 UAV_CTX.params = params;
 
-%% ================== 适应度函数 ==================
+%% ================== Fitness function ==================
 Fitness = @(x) calPathFitnessUAV( ...
     startPos, goalPos, X, Y, Z, decodePath(x), params);
 
 %% ================== Run comparison algorithms ==================
-disp('运行 SCLDPSO...');
+disp('Running SCLDPSO...');
 [scldpso_path, scldpso_history] = runSCLDPSO(Fitness, popsize, dimension, xmax, xmin, maxiter);
 
 
-disp('运行 EAPSO...');
+disp('Running EAPSO...');
 [eapso_path, eapso_history] = runEAPSO(Fitness, popsize, dimension, xmax, xmin, maxiter);
 
 
-disp('运行 SLPSO...');
+disp('Running SLPSO...');
 [slpso_path, slpso_history] = runSLPSO(Fitness, popsize, dimension, xmax, xmin, maxiter);
 
-disp('运行 CSO...');
+disp('Running CSO...');
 [cso_path, cso_history] = runCSO(Fitness, popsize, dimension, xmax, xmin, maxiter);
 
-disp('运行 HSLSO...');
+disp('Running HSLSO...');
 [hslso_path, hslso_history] = runHSLSO(Fitness, popsize, dimension, xmax, xmin, maxiter);
 
-%% ================== 三维路径图 ==================
+%% ================== 3-D path plot ==================
 figure;
 surf(X, Y, Z, 'EdgeColor', 'none');
 hold on;
@@ -85,7 +85,7 @@ legend('Location','best');
 grid on;
 view(-45,35);
 
-%% ================== 俯视图 ==================
+%% ================== Top view ==================
 figure;
 contourf(X, Y, Z, 40, 'LineColor', 'none');
 hold on;
@@ -108,7 +108,7 @@ axis equal tight;
 legend('Location','best');
 grid on;
 
-%% ================== 收敛曲线 ==================
+%% ================== Convergence curves ==================
 figure;
 hold on;
 
@@ -128,7 +128,7 @@ legend('Location','best');
 grid on;
 box on;
 
-%% ================== 指标输出 ==================
+%% ================== Metric output ==================
 metrics_SCLDPSO = evaluateUAVMetrics(scldpso_path, startPos, goalPos, X, Y, Z, params);
 metrics_EAPSO  = evaluateUAVMetrics(eapso_path,  startPos, goalPos, X, Y, Z, params);
 metrics_SLPSO   = evaluateUAVMetrics(slpso_path,   startPos, goalPos, X, Y, Z, params);

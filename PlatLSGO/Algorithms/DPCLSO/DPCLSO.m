@@ -1,10 +1,9 @@
-function [gbestx,bestever,gbesthistory] = DPCLSO(mainHandle,popsize,...
-    dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId,VisualSwitch)
+function [gbestx,bestever,gbesthistory] = DPCLSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 
 
 ComputeFitness = fCalculation;
 
-%% ================= 参数 ======================================
+%% ================= Parameters ======================================
 
 m = 600;
 
@@ -17,15 +16,15 @@ k     = 1.0;
 MaxFEs = 3e6;
 FEs = 0;
 
-%% ================= 初始化 ====================================
+%% ================= Initialization ====================================
 
 p = zeros(m,dimension);
 
 % --------------------------------------------------------------
-% 论文没有说明 V(0) 如何初始化。
+% The paper does not state how V(0) is initialized.
 %
-% Algorithm 1 只明确说随机初始化 population in solution space。
-% 为避免大随机初速度破坏初期搜索，这里初始化为 0。
+% Algorithm 1 only explicitly states that the population is randomly initialized in solution space.
+% To avoid a large random initial velocity disrupting the early search, it is initialized to 0 here.
 % --------------------------------------------------------------
 v = zeros(m,dimension);
 
@@ -41,7 +40,7 @@ end
 
 FEs = FEs + m;
 
-%% ================= 初始化最优 ================================
+%% ================= Initialize best ================================
 
 [bestever,id] = min(fitness);
 
@@ -62,18 +61,18 @@ while FEs < MaxFEs
     %% ==========================================================
     % 1. Sort particles from best to worst
     %
-    % 与 Algorithm 1 Line 4 对应
+    % Corresponds to Algorithm 1 Line 4
     %
-    % 注意：
-    % 这里直接重排 population，
-    % 因而排序后：
+    % Note:
+    % Here the population is reordered directly,
+    % so after sorting:
     %
-    % p(1,:) = 当前最好
-    % p(2,:) = 当前第二好
+    % p(1,:) = current best
+    % p(2,:) = current second best
     % ...
-    % p(m,:) = 当前最差
+    % p(m,:) = current worst
     %
-    % 此时 particle index 本身就是 rank。
+    % The particle index itself is then the rank.
     % ==========================================================
 
     [fitness,order] = sort(fitness,'ascend');
@@ -88,14 +87,14 @@ while FEs < MaxFEs
     % BPSmin = alpha * PS
     % BPSmax = beta  * PS
     %
-    % 论文 Eq.(5) 的排版为：
+    % The formatting of Eq.(5) in the paper is:
     %
     % BPSmax - round(BPSmax-BPSmin)*(FE/FEmax)^k
     %
-    % 但正文又说 round 用于把计算结果取整。
+    % but the main text also says that round is used to round the computed result.
     %
-    % BPS 本身定义为 "number of better particles"，
-    % 因此这里将动态减少量取整，使 BPS 始终为整数。
+    % BPS itself is defined as "number of better particles",
+    % so here the dynamic decrement is rounded so that BPS is always an integer.
     % ==========================================================
 
     BPSmin = round(alpha*m);
@@ -104,7 +103,7 @@ while FEs < MaxFEs
     BPS = BPSmax - ...
         round((BPSmax-BPSmin)*(FEs/MaxFEs)^k);
 
-    % 安全范围
+    % Safety range
     BPS = max(BPSmin,min(BPSmax,BPS));
 
 
@@ -115,7 +114,7 @@ while FEs < MaxFEs
     %
     % pro(i) = 1/[1+exp(-tau*(rank(i)-BPS))]
     %
-    % 当前 population 已排序，所以 rank(i)=i。
+    % The current population is already sorted, so rank(i)=i.
     % ==========================================================
 
     rankVector = 1:m;
@@ -131,10 +130,10 @@ while FEs < MaxFEs
     %
     % for each particle i (rank(i)>2)
     %
-    % 因此最好两个粒子不更新。
+    % Therefore the two best particles are not updated.
     %
-    % 这里按照排序后的顺序逐个原地更新，
-    % 与 Algorithm 1 的执行结构一致。
+    % Here the update is performed in place one by one in the sorted order,
+    % consistent with the execution structure of Algorithm 1.
     % ==========================================================
 
     for i = 3:m
@@ -155,15 +154,15 @@ while FEs < MaxFEs
             % Algorithm:
             % rank(i) < BPS
             %
-            % 两个 learning samples 均来自 better particles，
-            % 并且优于 particle i。
+            % Both learning samples come from better particles
+            % and are better than particle i.
             % ==================================================
 
             if i < BPS
 
                 % ----------------------------------------------
-                % ranks 1:i-1 全部优于当前 particle i，
-                % 同时它们也都属于 better group。
+                % ranks 1:i-1 are all better than the current particle i,
+                % and they all belong to the better group as well.
                 % ----------------------------------------------
 
                 candidate = 1:i-1;
@@ -179,10 +178,10 @@ while FEs < MaxFEs
                 %
                 % IMPORTANT:
                 %
-                % 对每个维度独立产生随机数。
+                % A random number is generated independently for each dimension.
                 %
-                % 这是高维 PSO/LSO 实现中更合理的解释，
-                % 而不是整个 1000D 共用一个随机标量。
+                % This is the more reasonable interpretation in high-dimensional PSO/LSO implementations,
+                % rather than sharing a single random scalar across the whole 1000D.
                 % ==============================================
 
                 r1 = rand(1,dimension);
@@ -200,8 +199,8 @@ while FEs < MaxFEs
             %% ==================================================
             % Worse particle
             %
-            % 一个 learning sample 来自 better group，
-            % 另一个来自 worse group。
+            % One learning sample comes from the better group,
+            % the other comes from the worse group.
             %
             % Algorithm 1 Lines 12-14.
             % ==================================================
@@ -212,8 +211,8 @@ while FEs < MaxFEs
                 % learning sample 1:
                 % better particle
                 %
-                % 论文用 rank < BPS 判定 better。
-                % 因此 better ranks 为：
+                % The paper uses rank < BPS to decide "better".
+                % Therefore the better ranks are:
                 %
                 % 1,...,BPS-1
                 % ----------------------------------------------
@@ -231,14 +230,14 @@ while FEs < MaxFEs
                 % learning sample 2:
                 % worse particle
                 %
-                % 论文正文在这里有歧义：
-                % 如果要求该 worse particle 必须优于 i，
-                % 那么第一个 worse particle 无解。
+                % The paper's main text is ambiguous here:
+                % if that worse particle is required to be better than i,
+                % then for the first worse particle there is no solution.
                 %
-                % Algorithm 1 仅要求 "from worse particles"。
+                % Algorithm 1 only requires "from worse particles".
                 %
-                % 因此这里从整个 worse group 中随机选择，
-                % 但不能选 particle i 自己。
+                % Therefore the choice here is made uniformly at random from the whole worse group,
+                % but particle i itself cannot be chosen.
                 % ----------------------------------------------
 
                 worseStart = BPS;
@@ -285,9 +284,9 @@ while FEs < MaxFEs
             %% ==================================================
             % Boundary handling
             %
-            % 论文没有明确给出边界策略。
+            % The paper does not specify the boundary strategy.
             %
-            % 这里与现有实验框架保持一致：
+            % Here it is kept consistent with the existing experimental framework:
             % saturation / clipping
             % ==================================================
 
@@ -332,7 +331,7 @@ while FEs < MaxFEs
             if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
 
                 fprintf(...
-                    'DPCLSO算法,第%d次评价，最佳适应度 = %e\n',...
+                    'DPCLSO  FE %d  best = %e\n',...
                     FEs,bestever);
 
             end
@@ -347,7 +346,7 @@ end
 
 
 %% ==============================================================
-% history 补齐
+% Pad the history
 % ==============================================================
 
 if FEs < MaxFEs

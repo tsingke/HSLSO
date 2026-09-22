@@ -25,7 +25,7 @@ lu = [xmin * ones(1, d); xmax * ones(1, d)];
 
 %parameter initiliaztion
 M = 100;
-m = 50;% 种群规模，传入的popsize用不上
+m = 50;% Swarm size; the popsize argument passed in is not used
 c3 = d/M*0.01;
 PL = zeros(m,1);
 
@@ -103,7 +103,7 @@ while(gen <= maxiter)
     end
     gbesthistory(gen)=bestever;
 %         if mod(FES, maxfe/10) == 0 && FES <= maxfe
-            fprintf("SLPSO 第%d代，最佳适应度 = %e\n",gen,bestever);
+            fprintf("SLPSO  gen %d  best = %e\n",gen,bestever);
 %         end
     gen = gen + 1;
 end

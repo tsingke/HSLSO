@@ -1,9 +1,9 @@
-function [gbestx,gbestfitness,gbesthistory]=D_CSO(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation, FuncId,VisualSwitch)
+function [gbestx,gbestfitness,gbesthistory]=D_CSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 MaxFEs = 3e6;
 FEs = 0;
 num_initial = 500;
 num_vari = dimension;
-varphi = 0.1; %100维0,500维0.1和0.05,1000维0.15和0.1
+varphi = 0.1; % 100-D: 0, 500-D: 0.1 and 0.05, 1000-D: 0.15 and 0.1
 func_num = FuncId;
 benchmark_func = fCalculation;
 
@@ -12,29 +12,29 @@ for i = 1:num_initial
     sample_y(i,:) = benchmark_func(sample_x(i,:)',func_num);
 end
 FEs = FEs + num_initial;
-v = zeros(num_initial,num_vari);  %v初始化为0
+v = zeros(num_initial,num_vari);  % v is initialized to 0
 fmin = min(sample_y);
 gbesthistory(1:FEs) = fmin;
 
 while FEs <= MaxFEs
 
-    % 根据种群熵来划分pb和pw,种群熵的计算与MATLAB中entropy计算熵类似
-    n_bin = num_initial;    %n_bin表示区间数
-    res = rescale(sample_y);    % rescale将数组的条目缩放到区间 [0,1]
-    p = imhist(res,n_bin);  % rescale将数组的条目缩放到区间 [0,1]
-    p(p==0) = [];   % 除去p中的0
-    p = p ./ numel(sample_y);% 正则化p使得sum(p)为1,numel计算数组中元素的数目
+    % Partition pb and pw according to the swarm entropy; the entropy is computed similarly to MATLAB's entropy
+    n_bin = num_initial;    % n_bin is the number of bins
+    res = rescale(sample_y);    % rescale scales the entries of the array to the interval [0,1]
+    p = imhist(res,n_bin);  % rescale scales the entries of the array to the interval [0,1]
+    p(p==0) = [];   % Remove the zeros in p
+    p = p ./ numel(sample_y);% Normalize p so that sum(p) is 1; numel returns the number of elements in the array
 
-    % 为了E最大为1,所以用logn(p),而不是log2(p)
+    % So that the maximum of E is 1, logn(p) is used instead of log2(p)
     n_nozero = size(p,1);
     E = -sum(p.*(log(p)./log(n_nozero)));
     
-    % 划分pb和pw
-    [sample_y,ind]= sort(sample_y); %按升序对 A 的元素进行排序
+    % Partition pb and pw
+    [sample_y,ind]= sort(sample_y); % Sort the elements of A in ascending order
     sample_x = sample_x(ind,:);
     v = v(ind,:);
     mean_x = mean(sample_x);
-    d = 0.45;   %100维0.25,500维0.35,1000维0.45
+    d = 0.45;   % 100-D: 0.25, 500-D: 0.35, 1000-D: 0.45
     if E > 1 - d
         mb = -(num_initial / d) * E + num_initial / d;
     else
@@ -42,7 +42,7 @@ while FEs <= MaxFEs
     end
     mb = ceil(mb);
     mw = num_initial - mb;
-    pb = sample_x(1:mb,:);  %越小越好
+    pb = sample_x(1:mb,:);  % Smaller is better
     pby = sample_y(1:mb,:);
     pbv = v(1:mb,:);
     pw = sample_x((mb + 1):num_initial,:);
@@ -51,17 +51,17 @@ while FEs <= MaxFEs
     next_samplex = [];
     next_sampley = [];
     next_v = [];
-    % 更新pw
+    % Update pw
     for i = 1:size(pw,1)
-        if size(pb,1) == 0  %pb有为空的问题
-            xj = sample_x(1,:);   %当前最小值
+        if size(pb,1) == 0  % pb may be empty
+            xj = sample_x(1,:);   % Current minimum
         else
             xj = pb(randi(size(pb,1)),:);
         end
         pwv(i,:) = rand(1, num_vari) .* pwv(i,:) + rand(1, num_vari) .* (xj - pw(i,:)) + varphi .* rand(1, num_vari) .* (mean_x - pw(i,:));
         xi = pw(i,:) + pwv(i,:);
         xi(xi > xmax) = xmax;
-        xi(xi < xmin) = xmin;% 范围检查
+        xi(xi < xmin) = xmin;% Range check
         if FEs <= MaxFEs
             yi = benchmark_func(xi',func_num);
             if yi < fmin
@@ -71,9 +71,9 @@ while FEs <= MaxFEs
             FEs = FEs + 1;
             gbesthistory(FEs) = fmin;
             if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-                fprintf("DCSO算法,第%d次评价，最佳适应度 = %e\n",FEs,fmin);
+                fprintf("DCSO  FE %d  best = %e\n",FEs,fmin);
             end
-            next_samplex = [next_samplex;xi];   %加到下一次迭代中
+            next_samplex = [next_samplex;xi];   % Add to the next iteration
             next_sampley = [next_sampley;yi];
             next_v = [next_v;pwv(i,:)];
         else
@@ -81,7 +81,7 @@ while FEs <= MaxFEs
         end
     end
 
-    % 更新pb
+    % Update pb
     while ~isempty(pb)
         if size(pb,1) == 1
             next_samplex = [next_samplex;pb];
@@ -91,7 +91,7 @@ while FEs <= MaxFEs
             pby = [];
             pbv = [];
         else
-            k1 = randi(size(pb, 1));    %随机抽取两个点
+            k1 = randi(size(pb, 1));    % Randomly draw two points
             k2 = randi(size(pb, 1));
             while k2 == k1
                 k2 = randi(size(pb, 1));
@@ -103,13 +103,13 @@ while FEs <= MaxFEs
                 add = k2;
                 update = k1;
             end
-            next_samplex = [next_samplex;pb(add,:)]; %add直接加入
+            next_samplex = [next_samplex;pb(add,:)]; % add is taken directly
             next_sampley = [next_sampley;pby(add,:)];
             next_v = [next_v;pbv(add,:)];
-            pbv(update,:) = rand(1, num_vari) .* pbv(update,:) + rand(1, num_vari) .* (pb(add,:) - pb(update,:));    %update需要更新
+            pbv(update,:) = rand(1, num_vari) .* pbv(update,:) + rand(1, num_vari) .* (pb(add,:) - pb(update,:));    % update needs updating
             xl = pb(update,:) + pbv(update,:);
             xl(xl > xmax) = xmax;
-            xl(xl < xmin) = xmin;% 范围检查
+            xl(xl < xmin) = xmin;% Range check
             if FEs <= MaxFEs
                 yl = benchmark_func(xl',func_num);
                 if yl < fmin
@@ -119,16 +119,16 @@ while FEs <= MaxFEs
                 FEs = FEs + 1;
                 gbesthistory(FEs) = fmin;
                 if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-                    fprintf("DCSO算法,第%d次评价，最佳适应度 = %e\n",FEs,fmin);
+                    fprintf("DCSO  FE %d  best = %e\n",FEs,fmin);
                 end
-                next_samplex = [next_samplex;xl];   %加到下一次迭代中
+                next_samplex = [next_samplex;xl];   % Add to the next iteration
                 next_sampley = [next_sampley;yl];
                 next_v = [next_v;pbv(update,:)];
             else
                 break;
             end
 
-            % 从pb中去掉k1和k2,从后面删除,防止后面删除的数索引发生变化
+            % Remove k1 and k2 from pb; delete from the back so that the indices of the remaining deletions stay valid
             if k1 > k2
                 first = k1;
                 second = k2;
@@ -145,8 +145,8 @@ while FEs <= MaxFEs
         end
     end
     
-    % 更新sample_x,v和sample_y
-    if size(next_samplex,1) ~= num_initial   %代表程序结束
+    % Update sample_x, v and sample_y
+    if size(next_samplex,1) ~= num_initial   % Indicates that the program terminates
         break;
     else
         sample_x = next_samplex;

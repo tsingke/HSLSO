@@ -26,7 +26,7 @@
 % Copyright notice: (c) 2013 Mohammad Nabi Omidvar
 
 
-function [best,bestval,gbesthistory] = DECC_MDG(~,popsize,dim,xmax,xmin,~,~,itermax,fname, func_num,~)
+function [best,bestval,gbesthistory] = DECC_MDG(popsize, dim, xmax, xmin, ~, ~, itermax, fname, func_num)
 
     % for fitness trace
     tracerst = [];
@@ -53,7 +53,7 @@ function [best,bestval,gbesthistory] = DECC_MDG(~,popsize,dim,xmax,xmin,~,~,iter
 
     % the initial crossover rate for SaNSDE
     group = {};
-    ccm = 0.5;%CRm交叉率的高斯分布随机函数的平均数，每25代更新一次
+    ccm = 0.5;%Mean of the Gaussian random function for the CRm crossover rate; updated every 25 generations
     sansde_iter = 1;
     Cycle = 0;
     iter = 0;
@@ -62,8 +62,8 @@ function [best,bestval,gbesthistory] = DECC_MDG(~,popsize,dim,xmax,xmin,~,~,iter
     FE = FEs+popsize;
     gbesthistory = [bestval*ones((FE),1)];
     
-    group = diff_grouping(func_num,problem);%返回差分分组的分组情况
-    group_num = size(group, 2);%返回分组数
+    group = diff_grouping(func_num,problem);%Returns the grouping result of differential grouping
+    group_num = size(group, 2);%Returns the number of groups
         
     
     display = 1;
@@ -80,7 +80,7 @@ function [best,bestval,gbesthistory] = DECC_MDG(~,popsize,dim,xmax,xmin,~,~,iter
                 break;
             end
 
-            dim_index = group{i};%返回第i个子组件的维度（决策变量）索引
+            dim_index = group{i};%Returns the dimension (decision variable) indices of the i-th subcomponent
             subpop = pop(:, dim_index); 
             subLbound = Lbound(:, dim_index);        
             subUbound = Ubound(:, dim_index);
@@ -91,7 +91,7 @@ function [best,bestval,gbesthistory] = DECC_MDG(~,popsize,dim,xmax,xmin,~,~,iter
 
                 iter = iter + oneitermax;
                 
-                %输出格式为实数，科学计算法形式
+                %The output format is real numbers in scientific notation
 %                 fprintf(fid, '%e\n', tracerst); 
 
                 
@@ -194,10 +194,10 @@ function [popnew, bestmemnew, bestvalnew, tracerst, ccm] = sansde(fname, func_nu
 
             cc_rec = [];
             f_rec = [];
-    %将除了要改进的子组件之外的其他变量的个体换成best个体所对应的代表性元素
+    %Replace the individuals of the variables other than the subcomponent to be improved with the representative elements of the best individual
     gpop = ones(popsize, 1) * bestmem;
     gpop(:, dim_index) = pop;
-    %更新best
+    %Update best
     val = fname(gpop', func_num);
     [best, ibest] = min(val);
     subbestmem = pop(ibest, :);
@@ -212,12 +212,12 @@ function [popnew, bestmemnew, bestvalnew, tracerst, ccm] = sansde(fname, func_nu
     while iter < itermax
         popold = pop;                   % save the old population
         
-        ind = randperm(4);              % index pointer array返回一行从1到4的随机排列的整数
+        ind = randperm(4);              % index pointer array, returns a random permutation of the integers from 1 to 4
         
         a1  = randperm(NP);             % shuffle locations of vectors
         rt = rem(rot+ind(1),NP);        % rotate indices by ind(1) positions
         a2  = a1(rt+1);                 % rotate vector locations
-        rt = rem(rot+ind(2),NP);        %rem取余
+        rt = rem(rot+ind(2),NP);        %rem takes the remainder
         a3  = a2(rt+1);                
         rt = rem(rot+ind(3),NP);
         a4  = a3(rt+1);               
@@ -231,7 +231,7 @@ function [popnew, bestmemnew, bestvalnew, tracerst, ccm] = sansde(fname, func_nu
         pm5 = popold(a5,:);             % shuffled population 5
         
         bm = ones(NP, 1) * subbestmem;
-        %每25代更新一次CRm(ccm)
+        %Update CRm (ccm) every 25 generations
         if rem(iter,24)==0
             if (iter~=0) && (~isempty(cc_rec))
                 ccm = sum(f_rec.*cc_rec)/sum(f_rec);%CRm
@@ -239,14 +239,14 @@ function [popnew, bestmemnew, bestvalnew, tracerst, ccm] = sansde(fname, func_nu
             cc_rec = [];
             f_rec = [];
         end
-        %每5代更新一次交叉率cc,NP维的矩阵
+        %Update the crossover rate cc every 5 generations; an NP-dimensional matrix
 
         if rem(iter,5)==0
-            cc = normrnd(ccm, 0.1, NP*3, 1);%产生行(NP*3)*列1的正态分布随机数矩阵
+            cc = normrnd(ccm, 0.1, NP*3, 1);%Generates a normally distributed random matrix with (NP*3) rows and 1 column
             index = find((cc < 1) & (cc > 0));
             cc = cc(index(1:NP));
         end
-        %比例因子F自适应更新
+        %Adaptive update of the scaling factor F
         fst1 = (rand(NP,1) <= fp);
         fst2 = 1-fst1;
 
@@ -262,12 +262,12 @@ function [popnew, bestmemnew, bestvalnew, tracerst, ccm] = sansde(fname, func_nu
         F = abs(F);
         
         % all random numbers < CR are 1, 0 otherwise
-        aa = rand(NP,D) < repmat(cc,1,D);%repmat产生维度为[size(cc,1)*1, size(cc,2)*D]即[NP,D]的矩阵,每一行的元素均为cc[i]
-        index = find(sum(aa') == 0);%aa'转置，sum每一列元素求和的结果，结果为行向量
+        aa = rand(NP,D) < repmat(cc,1,D);%repmat produces a matrix of size [size(cc,1)*1, size(cc,2)*D], i.e. [NP,D], in which every element of a row equals cc[i]
+        index = find(sum(aa') == 0);%aa' is the transpose; sum gives the sum of each column, returned as a row vector
         tmpsize = size(index, 2);
         for k=1:tmpsize
-            bb = ceil(D*rand);%向上取整
-            aa(index(k), bb) = 1;%保证每个个体都进行了交叉，ui不重复xi
+            bb = ceil(D*rand);%Round up
+            aa(index(k), bb) = 1;%Ensure that every individual undergoes crossover so that ui is not a duplicate of xi
         end
             
         mui=aa;

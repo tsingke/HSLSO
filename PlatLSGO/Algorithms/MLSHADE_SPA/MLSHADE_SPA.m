@@ -1,4 +1,4 @@
-function [gbestx,bestever,gbesthistory]=MLSHADE_SPA(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId,VisualSwitch)
+function [gbestx,bestever,gbesthistory]=MLSHADE_SPA(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 % =========================================================================
 % MLSHADE-SPA -- platform-adapted version based on the authors' MATLAB code
 %
@@ -8,8 +8,8 @@ function [gbestx,bestever,gbesthistory]=MLSHADE_SPA(mainHandle,popsize,dimension
 %   problems", Complex & Intelligent Systems, 5 (2019), 25-40.
 %
 % Platform interface follows:
-%   [gbestx,bestever,gbesthistory] = Algorithm(mainHandle,popsize,...
-%       dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId,VisualSwitch)
+%   [gbestx,bestever,gbesthistory] = Algorithm(popsize,dimension,...
+%       xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 %
 % Adaptation rules:
 %   1) Internal MLSHADE-SPA population remains NP=250 and is reduced to 20
@@ -22,8 +22,8 @@ function [gbestx,bestever,gbesthistory]=MLSHADE_SPA(mainHandle,popsize,dimension
 %   5) The MMTS local FE loop uses an exact < budget condition to prevent
 %      the released source's one-evaluation bookkeeping overshoot.
 %
-% mainHandle, popsize, vmax, vmin, maxiter and VisualSwitch are retained only
-% for compatibility with the user's unified experiment interface.
+% popsize, vmax, vmin and maxiter are retained only for compatibility with
+% the unified experiment interface; the values actually used are set below.
 % =========================================================================
 
 ComputeFitness = fCalculation;
@@ -35,12 +35,10 @@ MaxFEs = 3e6;
 
 % Preserve platform-compatible inputs without changing the authors'
 % algorithm-specific NP and FE settings.
-mainHandle = mainHandle; %#ok<NASGU>
 popsize = popsize; %#ok<NASGU>
 vmax = vmax; %#ok<NASGU>
 vmin = vmin; %#ok<NASGU>
 maxiter = maxiter; %#ok<NASGU>
-VisualSwitch = VisualSwitch; %#ok<NASGU>
 
 % Bounds: support either scalars or 1-by-D vectors.
 if isscalar(xmin)
@@ -330,7 +328,7 @@ end
             gbesthistory(FEs) = bestever;
 
             if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-                fprintf('MLSHADE-SPA算法,第%d次评价，最佳适应度 = %e\n',...
+                fprintf('MLSHADE-SPA  FE %d  best = %e\n',...
                     FEs,bestever);
             end
         end

@@ -1,36 +1,36 @@
 function rounded_num = bankerRound(num, dec_place)
-% 此算法为银行家舍入算法
-% 注：matlab默认保留四位小数
+% This is banker's rounding
+% Note: MATLAB keeps four decimal places by default
 
-% x为输入浮点数
-% n为保留小数位数
+% x is the input floating-point number
+% n is the number of decimal places to keep
 
-% 将x扩大到要保留的小数位数的整数倍
+% Scale x up to an integer multiple of the number of decimal places to keep
 factor = 10^dec_place;
 num = num * factor;
 
-% 获取待舍位数的左侧数字
+% Get the digit to the left of the digit to be rounded off
 left_num = floor(num/10);
 
-% 获得待舍位数
+% Get the digit to be rounded off
 round_num = mod(num,10);
 
-% 判断待舍位数左侧数字的奇偶性
+% Determine the parity of the digit to the left of the digit to be rounded off
 if mod(left_num,2)==0
-    % 左侧数字为偶数，采用"五舍六入"策略
+    % The left digit is even, so the "5 down, 6 up" strategy is used
     if round_num<5
         rounded_num = floor(num/10)/factor;
     else
         rounded_num = ceil(num/10)/factor;
     end
 else
-    % 左侧数字为奇数，采用"四舍六入五考虑"策略
+    % The left digit is odd, so the "4 down, 6 up, 5 considered" strategy is used
     if round_num<5
         rounded_num = floor(num/10)/factor;
     elseif round_num>5
         rounded_num = ceil(num/10)/factor;
     else
-        % 如果待舍位数为5，则将结果末位保证是偶数
+        % If the digit to be rounded off is 5, make the last digit of the result even
         if mod(floor(num/factor),2)==0
             rounded_num = floor(num/10)/factor;
         else

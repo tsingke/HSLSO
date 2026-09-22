@@ -20,7 +20,7 @@ copyfile(src,dst,'f');
 cleanupObj = onCleanup(@() restore_file(dst,backup,hadDst));
 addpath(ccosDir);
 pathObj = onCleanup(@() rmpath(ccosDir));
-[bestX,bestFitness,bestHistory] = CCOS([],popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId,[]);
+[bestX,bestFitness,bestHistory] = CCOS(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,f,funcId);
 end
 
 function restore_file(dst,backup,hadDst)

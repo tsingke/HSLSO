@@ -1,22 +1,22 @@
 function [bestPath, gbesthistory] = runCSO(Fitness, popsize, dimension, xmax, xmin, maxiter)
-    % 1. 参数初始化
-    m = popsize; % 统一使用传入的种群规模
+    % 1. Parameter initialization
+    m = popsize; % Use the swarm size passed in, consistently
     phi = 0.1;
     
-    % 速度边界自适应
+    % Adaptive velocity bounds
     vmax = (xmax - xmin) * 0.2;
     vmin = -vmax;
     
     FEs = 0;
     MaxFEs = popsize * maxiter;
     
-    % 2. 初始化种群和速度
+    % 2. Initialize the population and velocity
     p = xmin + (xmax - xmin) .* rand(m, dimension);
     v = vmin + (vmax - vmin) .* rand(m, dimension);
 
     fitness = zeros(m, 1);
     
-    % 初始评估
+    % Initial evaluation
     for i = 1:m
         fitness(i) = Fitness(p(i,:)');
     end
@@ -25,22 +25,22 @@ function [bestPath, gbesthistory] = runCSO(Fitness, popsize, dimension, xmax, xm
     [bestever, id] = min(fitness);
     gbestx = p(id, :);
     
-    % 初始化历史记录（严格映射到 maxiter 长度以对齐画图）
+    % Initialize the history record (mapped strictly to length maxiter to align the plots)
     gbesthistory = zeros(1, maxiter);
     gbesthistory(1) = bestever;
     
-    % 3. 主循环
+    % 3. Main loop
     while FEs < MaxFEs
-        % 随机构建竞争对
+        % Build the competition pairs at random
         rlist = randperm(m);
-        % 使用 floor 处理可能的奇数 popsize 情况
+        % Use floor to handle a possible odd popsize
         half_m = floor(m / 2);
         rpairs = [rlist(1:half_m); rlist(half_m + 1 : 2 * half_m)]';
         
-        % 计算当前种群中心位置
+        % Compute the current population center
         center = mean(p);
         
-        % 粒子对竞争
+        % Pairwise particle competition
         mask = (fitness(rpairs(:, 1)) > fitness(rpairs(:, 2)));
         for k = 1:half_m
             if mask(k) == 0
@@ -51,26 +51,26 @@ function [bestPath, gbesthistory] = runCSO(Fitness, popsize, dimension, xmax, xm
                 win = rpairs(k, 2);
             end
             
-            % 失败者向胜利者和中心位置学习
+            % The loser learns from the winner and the center position
             v(los, :) = rand(1, dimension) .* v(los, :) + ...
                         rand(1, dimension) .* (p(win, :) - p(los, :)) + ...
                         phi * rand(1, dimension) .* (center - p(los, :));
             p(los, :) = p(los, :) + v(los, :);
             
-            % 边界约束
+            % Boundary constraint
             p(los, :) = max(min(p(los, :), xmax), xmin);
             
-            % 适应度评价（只有失败者需要重新评价）
+            % Fitness evaluation (only the loser needs to be re-evaluated)
             fitness(los) = Fitness(p(los, :)');
             FEs = FEs + 1;
             
-            % 更新全局最优
+            % Update the global best
             if fitness(los) < bestever
                 bestever = fitness(los);
                 gbestx = p(los, :);
             end
             
-            % 精确映射当前 FEs 对应的标准代数索引，保障绘图对齐
+            % Map FEs exactly to the standard generation index to keep the plots aligned
             idx = min(maxiter, floor(FEs / popsize) + 1);
             gbesthistory(idx) = bestever;
             
@@ -80,13 +80,13 @@ function [bestPath, gbesthistory] = runCSO(Fitness, popsize, dimension, xmax, xm
         end
     end
     
-    % 补齐历史数据（防止因提前跳出导致末尾出现 0）
+    % Fill in the history data (prevents trailing zeros when the loop exits early)
     for i = 2:maxiter
         if gbesthistory(i) == 0
             gbesthistory(i) = gbesthistory(i-1);
         end
     end
     
-    % 返回最优路径三维格式
+    % Return the best path in 3-D format
    bestPath = decodePath(gbestx);
 end

@@ -15,7 +15,7 @@ PLfina = 1-PLinit;
 for i =1:popsize
     p(i,:)=xmin+(xmax-xmin).*rand(1,dimension);
     v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
-    fitnessx(i)= fitness(sequence,aa,lengthdata,L,p(i,:)); % ComputeFitness(p(i,:)',FuncId); % 个体适应度    
+    fitnessx(i)= fitness(sequence,aa,lengthdata,L,p(i,:)); % ComputeFitness(p(i,:)',FuncId); % individual fitness    
 end
 pbest = p;
 pbestfitness = fitnessx;
@@ -74,7 +74,7 @@ while l<=maxiter
         end
     end
     gbesthistory(l) = bestever;
-    fprintf("HSLSO1算法,第%d次评价，最佳适应度 = %e\n",l,bestever);
+    fprintf("HSLSO1  FE %d  best = %e\n",l,bestever);
     l = l+1;
 end
 end

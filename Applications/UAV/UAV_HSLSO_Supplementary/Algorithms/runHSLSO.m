@@ -1,7 +1,7 @@
 function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, xmin, maxiter)
-    % 1. 参数初始化
+    % 1. Parameter initialization
     N = 10; 
-    % 确保 popsize 能被 N 整除，避免索引越界
+    % Ensure popsize is divisible by N to avoid an index out of range
     if mod(popsize, N) ~= 0
         m = floor(popsize / N);
         popsize = m * N;
@@ -9,7 +9,7 @@ function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, 
         m = popsize / N;
     end
     
-    % 速度边界自适应
+    % Adaptive velocity bounds
     vmax = (xmax - xmin) * 0.2; 
     vmin = -vmax;
     
@@ -19,12 +19,12 @@ function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, 
     PLinit = (1:N)/N;
     PLfina = 1 - PLinit;
     
-    % 初始化种群与速度
+    % Initialize the population and velocity
     p = xmin + (xmax - xmin) .* rand(popsize, dimension);
     v = vmin + (vmax - vmin) .* rand(popsize, dimension);
     fitness = zeros(popsize, 1);
     
-    % 初始评估
+    % Initial evaluation
     for i = 1:popsize
         fitness(i) = Fitness(p(i,:)');    
     end
@@ -35,17 +35,17 @@ function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, 
     [bestever, id] = min(fitness);
     gbestx = p(id, :); 
     
-    % 初始化历史记录（按代数记录，对齐主框架作图）
+    % Initialize the history record (recorded per generation, aligned with the main framework's plotting)
     gbesthistory = zeros(1, maxiter);
     iter = 1;
     gbesthistory(iter) = bestever;
     
-    % 2. 主循环
+    % 2. Main loop
     while FEs < MaxFEs
         iter = iter + 1;
-        if iter > maxiter; break; end % 保护机制
+        if iter > maxiter; break; end % safeguard
         
-        % 排序和分层
+        % Sorting and layering
         [fitness, rank] = sort(fitness);
         p = p(rank,:);
         v = v(rank,:);
@@ -60,7 +60,7 @@ function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, 
                     if rand < PL(sub)
                         i = (sub - 1) * m + k; 
                         
-                        % 选择学习范例
+                        % Select the learning exemplars
                         if sub == 2
                             learna = pbest(randperm(m, 1), :);
                             learnb = pbest(randperm(m, 1), :);
@@ -78,18 +78,18 @@ function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, 
                             learnb = pbest((b - 1) * m + randperm(m, 1), :);
                         end
                         
-                        % 位置更新
+                        % Position update
                         v(i,:) = rand(1,dimension).*v(i,:) + rand(1,dimension).*(learna-p(i,:)) + phi.*rand(1,dimension).*(learnb-p(i,:));
                         p(i,:) = p(i,:) + v(i,:);
                         
-                        % 边界越界处理
+                        % Boundary violation handling
                         p(i,:) = max(min(p(i,:), xmax), xmin);
                         
-                        % 适应度评价
+                        % Fitness evaluation
                         fitness(i) = Fitness(p(i,:)');
                         FEs = FEs + 1;
                         
-                        % pbest 及 gbest 更新
+                        % pbest and gbest update
                         if fitness(i) < pbestfitness(i)
                             pbestfitness(i) = fitness(i);
                             pbest(i,:) = p(i,:);
@@ -110,17 +110,17 @@ function [bestPath, gbesthistory] = runHSLSO(Fitness, popsize, dimension, xmax, 
                 break;
             end
         end
-        % 记录当代最佳
+        % Record the best of the current generation
         gbesthistory(iter) = bestever;
     end
     
-    % 补齐历史（如果提早触发 FEs 结束）
+    % Fill in the history (in case the FEs budget ended early)
     if iter < maxiter
         gbesthistory(iter+1:maxiter) = bestever; 
     elseif iter > maxiter
         gbesthistory(maxiter+1:end) = []; 
     end
     
-    % 输出格式转换为三维航点矩阵
+    % Convert the output format to a 3-D waypoint matrix
     bestPath = decodePath(gbestx);
 end

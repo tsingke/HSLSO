@@ -1,9 +1,9 @@
-function [gbestx,bestever,gbesthistory] = MOS(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId,VisualSwitch)
+function [gbestx,bestever,gbesthistory] = MOS(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 % MOS  SOURCEPORT_V3_20260827 - source-grounded MATLAB port of MOS-CEC2013.
 %
-% Platform interface (kept identical to the user's other algorithms):
-%   [gbestx,bestever,gbesthistory] = MOS(mainHandle,popsize,dimension,...
-%       xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId,VisualSwitch)
+% Platform interface (kept identical to the other platform algorithms):
+%   [gbestx,bestever,gbesthistory] = MOS(popsize,dimension,...
+%       xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 %
 % Objective call convention:
 %   f = fCalculation(x', FuncId)
@@ -66,7 +66,7 @@ D = dimension;
 NP = 400;                   % CEC2013 selected GA population size
 
 % Compatibility-only inputs, intentionally unused by MOS-CEC2013:
-% mainHandle, popsize, vmax, vmin, maxiter, VisualSwitch
+% popsize, vmax, vmin, maxiter
 
 % Bounds -> 1-by-D vectors.
 lb = xmin;
@@ -249,7 +249,7 @@ end
         gbesthistory(FEs) = bestever;
 
         if mod(FEs,printEvery) == 0
-            fprintf('MOS算法，第%d次评价，最佳适应度 = %e\n',FEs,bestever);
+            fprintf('MOS  FE %d  best = %e\n',FEs,bestever);
         end
     end
 

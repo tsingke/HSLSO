@@ -167,12 +167,13 @@ platform root; if you call the platform functions by hand, you must do the same.
 
 ## Algorithms
 
-22 algorithms, all reached through one interface:
+22 algorithms, all reached through one interface. Parameters an algorithm does
+not need are declared `~` in its own signature, never passed as placeholders:
 
 ```matlab
 [gbestx, bestever, gbesthistory] =
-    Algorithm(mainHandle, popsize, dimension, xmax, xmin, vmax, vmin, ...
-              maxiter, fCalculation, FuncId, VisualSwitch)
+    Algorithm(popsize, dimension, xmax, xmin, vmax, vmin, ...
+              maxiter, fCalculation, FuncId)
 ```
 
 Grouped by family, so the comparison is legible at a glance — the baseline swarm
@@ -317,14 +318,26 @@ plus two roll-ups written per suite:
 ## Third-party code
 
 The comparison algorithms are the authors' own reference implementations,
-platform-adapted to the common interface above. Algorithm internals are
-reproduced as published. Where a source file carries its own header and license
-notice, that notice governs the file and has been preserved.
+platform-adapted to the common interface above. Their search logic is reproduced
+as published. Where a source file carries its own header and license notice, that
+notice governs the file and has been preserved.
 
-One change was made across the algorithm files for log sanity, and it affects
-none of them numerically. In the working copies used for the paper, several
+Three changes were made across the algorithm files. None of them touches the
+search: no evaluation counter, fitness value, branch or loop is altered anywhere.
+
+**One common interface.** Every algorithm now declares the same nine-argument
+signature `(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)`.
+The unused leading `mainHandle` and trailing `VisualSwitch` placeholders that some
+files carried have been dropped, so `core/run_algorithm.m` reaches all of them
+through a single `feval`.
+
+**English throughout.** Comments and progress messages that were written in
+Chinese are now in English. Only comment text and `fprintf` format strings
+changed; each message still carries the same numbers in the same order.
+
+**Print throttling.** In the working copies used for the paper, several
 algorithms printed a line on **every** function evaluation
-(`fprintf(... 第%d次评价 ...)`) — some 3·10⁶ lines of stdout per run, which makes
+(`fprintf(... FE %d  best = %e ...)`) — some 3·10⁶ lines of stdout per run, which makes
 the log of a full sweep unusable and slows it down. Each of those prints is now
 wrapped in a `mod` guard and fires every 10% of the budget: 10 progress lines per
 run. The algorithms that already shipped behind a throttle (`SLPSO`, `LLSO`,
@@ -345,8 +358,8 @@ unaffected.
   source's own evaluation cap)
 - `Algorithms/LLSO/`, `Algorithms/DLLSO/` — Q. Yang et al., IEEE TEC 2018
 
-Apart from the print guards described above, no algorithm file in this release
-has been modified.
+Apart from the three changes listed above, no algorithm file in this release has
+been modified.
 
 Benchmark code and definition documents under `benchmarks/*/docs/` are the
 official CEC2010/CEC2013 LSGO competition materials. Their content is unchanged.

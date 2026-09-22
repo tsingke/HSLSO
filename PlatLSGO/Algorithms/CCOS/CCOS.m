@@ -6,43 +6,43 @@
 % ------------
 % ccos - This function implements the CC framework that can select an appropriate 
 %        optimizer from a given algorith pool for solving large-scale problems.
-function [xbest,bestval,gbesthistory] = CCOS(~,NP,dim,xmax,xmin,~,~,~,Func,func_num,~)
+function [xbest,bestval,gbesthistory] = CCOS(NP,dim,xmax,xmin,~,~,~,Func,func_num)
 %     global gbesthistory;
 %     global countFE;
 
     decResults = sprintf('./Algorithms/CCOS/CEC2013/rdg/results/F%02d', func_num);
     load (decResults);
-    FEMax = 3e6; % 优化阶段使用的评估次数等于最大评估次数减分组阶段使用的评估次数
+    FEMax = 3e6; % The number of evaluations used in the optimization phase equals the maximum number of evaluations minus those used in the grouping phase
 
     Lbound = xmin.*ones(NP,dim);
     Ubound = xmax.*ones(NP,dim);
 
-    % trace for the fitness value 跟踪适应度值
+    % trace for the fitness value
     groupingFE = 3e6 - FEs; % FEs used in decomposition
     
-    countFE = FEs; % 评估次数
-    maxFECycle = 10000; % 每轮循环使用的最大评估次数
+    countFE = FEs; % Number of evaluations (FEs)
+    maxFECycle = 10000; % Maximum number of evaluations used per cycle
   
-    % grouping cell 分组元组
-    allGroups = grouping(func_num); % 加载RDG方法的分组结果
-    numGroups = size(allGroups, 2); % 组数
+    % grouping cell
+    allGroups = grouping(func_num); % Load the grouping result of the RDG method
+    numGroups = size(allGroups, 2); % Number of groups
     
-    % initialization for sansde 优化器的初始化
-    popsize = NP; % 种群规模，这里NP=100，在run函数中定义
+    % initialization for sansde
+    popsize = NP; % Swarm size; here NP=100, defined in the run function
     ccm = 0.5*ones(1,numGroups);
-    pop = Lbound + rand(popsize, dim) .* (Ubound-Lbound); % 种群初始化
+    pop = Lbound + rand(popsize, dim) .* (Ubound-Lbound); % Swarm initialization
     for i = 1:popsize
         val(i) = Func(pop(i,:)',func_num);
     end
-    [bestval, ibest] = min(val); % 获取最佳适应度值和最佳适应度值个体
+    [bestval, ibest] = min(val); % Get the best fitness value and the individual with the best fitness value
     xbest = pop(ibest, :);
-    countFE=countFE+popsize; % 评估次数
+    countFE=countFE+popsize; % Number of evaluations (FEs)
 %     fprintf(fid1, '%d, %e\n', groupingFE, bestval);
     
     % Initialization for slpso
     v = zeros(NP, dim);
     
-    % Initialization of fitness improvement array 初始化适应度提升矩阵
+    % Initialization of fitness improvement array
     fitImpAccum = zeros(1,2*numGroups);
     fitness = repmat(val', [1 numGroups]);
      
@@ -50,11 +50,11 @@ function [xbest,bestval,gbesthistory] = CCOS(~,NP,dim,xmax,xmin,~,~,~,Func,func_
     display = 1; % 1 display results; 0 not display results 
     while (countFE < FEMax)
         cycle = cycle + 1;   
-        maxVal = max(fitImpAccum); % 获取适应度提升矩阵的最大值
-        idx    = find(fitImpAccum == maxVal); % 获取适应度提升矩阵最大值的索引值
+        maxVal = max(fitImpAccum); % Get the maximum value of the fitness improvement array
+        idx    = find(fitImpAccum == maxVal); % Get the index of the maximum value of the fitness improvement array
         for i = 1:length(idx)    
-            groupIdx = mod(idx(i)-1,numGroups)+1; % 适应度提升最大的子组
-            algIdx   = ceil(idx(i)/numGroups); % 用于判断使用的优化器
+            groupIdx = mod(idx(i)-1,numGroups)+1; % Subgroup with the largest fitness improvement
+            algIdx   = ceil(idx(i)/numGroups); % Used to determine which optimizer is used
             assert(algIdx==1 || algIdx==2);     
             dimIdx = allGroups{groupIdx};
             if algIdx == 1 
@@ -63,8 +63,8 @@ function [xbest,bestval,gbesthistory] = CCOS(~,NP,dim,xmax,xmin,~,~,~,Func,func_
                 [pop(:,dimIdx),fitness(:,groupIdx),xbestnew,bestvalnew,v(:,dimIdx)] = slpso(Func,func_num,dimIdx,pop(:,dimIdx),fitness(:,groupIdx),xbest,bestval,Lbound(:,dimIdx),Ubound(:,dimIdx),maxFECycle,v(:,dimIdx));
             end          
             if bestvalnew < bestval
-                fitimp = (bestval-bestvalnew)/bestval; % 适应度提升率
-                fitImpAccum(idx(i)) = (fitImpAccum(idx(i))+fitimp)/2; % 更新适应度提升矩阵  
+                fitimp = (bestval-bestvalnew)/bestval; % Fitness improvement rate
+                fitImpAccum(idx(i)) = (fitImpAccum(idx(i))+fitimp)/2; % Update the fitness improvement array
                 xbest = xbestnew;
                 bestval = bestvalnew;
             else
@@ -75,7 +75,7 @@ function [xbest,bestval,gbesthistory] = CCOS(~,NP,dim,xmax,xmin,~,~,~,Func,func_
 %             fprintf(fid2, '%d, %d, %d\n', cycle, groupIdx, algIdx);
         end
         
-        if(display == 1 && mod(cycle,1)==0) % 在命令行窗口输出
+        if(display == 1 && mod(cycle,1)==0) % Output in the command window
            fprintf(1, 'Cycle = %d, bestval = %e, component = %d, algorithm = %d, \n', cycle, bestval, groupIdx, algIdx);
 %            fprintf(fid1, '%d, %e\n', countFE + groupingFE, bestval);
         end

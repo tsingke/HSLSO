@@ -14,51 +14,51 @@ VarMax=xmax.*ones(1,nVar);
 MaxIt=maxiter;
 
 % MaxIt=floor(MaxIt/nPop*2);
-% 使用结构体
+% use a structure
 VarSize=[1 nVar];  
-empty_particle.Position=[]; % 粒子位置
-empty_particle.Cost=[]; % 粒子适应度
-empty_particle.Velocity=[]; % 粒子速度
-empty_particle.Best.Position=[]; % 个体最优位置
-empty_particle.Best.Cost=[]; % 个体最优适应度
-particle=repmat(empty_particle,nPop,1); % npop行，1列
+empty_particle.Position=[]; % particle position
+empty_particle.Cost=[]; % particle fitness
+empty_particle.Velocity=[]; % particle velocity
+empty_particle.Best.Position=[]; % individual best position
+empty_particle.Best.Cost=[]; % individual best fitness
+particle=repmat(empty_particle,nPop,1); % npop rows, 1 column
 GlobalBest.Cost=eps;
 
-% 种群初始化
+% population initialization
 for i=1:nPop
-    particle(i).Position=VarMin+(VarMax-VarMin).*rand(1,nVar);% 位置
-    particle(i).Velocity=zeros(VarSize);% 速度
-    particle(i).Cost= fitness(sequence,k,lengthdata,L,particle(i).Position);% 适应度
+    particle(i).Position=VarMin+(VarMax-VarMin).*rand(1,nVar);% position
+    particle(i).Velocity=zeros(VarSize);% velocity
+    particle(i).Cost= fitness(sequence,k,lengthdata,L,particle(i).Position);% fitness
     FEs=FEs+1;
-    particle(i).Best.Position=particle(i).Position;% 个体最优位置
-    particle(i).Best.Cost=particle(i).Cost;% 个体最优适应度
+    particle(i).Best.Position=particle(i).Position;% individual best position
+    particle(i).Best.Cost=particle(i).Cost;% individual best fitness
     if particle(i).Best.Cost>GlobalBest.Cost
-        GlobalBest=particle(i).Best;% 全局最优
+        GlobalBest=particle(i).Best;% global best
     end
 end
-pcount=2;% 存储Bt，保存Xt中所有粒子的一些有前途的历史最佳解决方案
+pcount=2;% store Bt, which keeps some promising historical best solutions of all particles in Xt
 for i=1:nPop
-    cosp(i)=particle(i).Cost; % 个体最优位置
+    cosp(i)=particle(i).Cost; % individual best position
 end
-[~,inp]=sort(cosp);% 个体最优位置适应度排序
-PART(1)=particle(inp(1)).Best;% 选择两个最好的粒子放入At和Bt中
+[~,inp]=sort(cosp);% sort by the fitness of the individual best positions
+PART(1)=particle(inp(1)).Best;% select the two best particles and put them into At and Bt
 PART(2)=particle(inp(2)).Best;
 NP=nPop;
 BestCost(i) = GlobalBest.Cost;
 
-GART(1)=GlobalBest;% Ct，保存一些有前途的全局最佳解决方案而构建的，其最大长度也等于种群大小
+GART(1)=GlobalBest;% Ct, built to keep some promising global best solutions; its maximum length also equals the population size
 gcount=1;% Ct
-VelMax=(VarMax-VarMin);% 速度最大值
-VelMin=-VelMax;% 速度最小值
+VelMax=(VarMax-VarMin);% maximum velocity
+VelMin=-VelMax;% minimum velocity
 it=2;
 while it <= maxiter 
     
     for i=1:nPop
-        cosp(i)=particle(i).Best.Cost;% 个体最优位置
+        cosp(i)=particle(i).Best.Cost;% individual best position
     end
     [~,ind]=sort(cosp);
-    WINNER=ind(1:nPop/2);% 胜者
-    LOSER= ind(nPop/2+1:nPop);% 败者
+    WINNER=ind(1:nPop/2);% winners
+    LOSER= ind(nPop/2+1:nPop);% losers
     for i=1:nPop/2
         a=randperm(length(PART),1);
         b=randperm(length(PART),1);
@@ -97,7 +97,7 @@ while it <= maxiter
         MM=particle(LOSER(i)).Position;
         F1=rand(1,nVar);
         F2=rand(1,nVar);
-        %% 算法3
+        %% Algorithm 3
         if cosp(LOSER(i))>mean(cosp(LOSER))
             if PART(a).Cost>GART(b).Cost && PART(a).Cost>particle(WINNER(c)).Best.Cost 
                 particle(LOSER(i)).Velocity=w.*particle(LOSER(i)).Velocity+F1.*(PART(a).Position-MM)+F2.*(GlobalBest.Position-MM);
@@ -115,16 +115,16 @@ while it <= maxiter
                  particle(LOSER(i)).Velocity=w.*particle(LOSER(i)).Velocity+F1.*(PART(a).Position-MM)+F2.*(GART(b).Position-particle(LOSER(i)).Position); 
              end
         end
-        particle(LOSER(i)).Velocity = max(particle(LOSER(i)).Velocity,VelMin);% 速度边界控制
+        particle(LOSER(i)).Velocity = max(particle(LOSER(i)).Velocity,VelMin);% velocity boundary control
         particle(LOSER(i)).Velocity = min(particle(LOSER(i)).Velocity,VelMax);
         particle(LOSER(i)).Position = particle(LOSER(i)).Position + particle(LOSER(i)).Velocity;
-        IsOutside=(particle(LOSER(i)).Position<VarMin | particle(LOSER(i)).Position>VarMax);% 位置边界控制
+        IsOutside=(particle(LOSER(i)).Position<VarMin | particle(LOSER(i)).Position>VarMax);% position boundary control
         particle(LOSER(i)).Velocity(IsOutside)=-particle(LOSER(i)).Velocity(IsOutside);
         particle(LOSER(i)).Position = max(particle(LOSER(i)).Position,VarMin);
         particle(LOSER(i)).Position = min(particle(LOSER(i)).Position,VarMax);
         particle(LOSER(i)).Cost = fitness(sequence,k,lengthdata,L,particle(i).Position);
         FEs=FEs+1;
-        % 更新Bt
+        % update Bt
         if particle(LOSER(i)).Cost>particle(LOSER(i)).Best.Cost
             particle(LOSER(i)).Best.Position=particle(LOSER(i)).Position;
             particle(LOSER(i)).Best.Cost=particle(LOSER(i)).Cost;
@@ -156,7 +156,7 @@ while it <= maxiter
             GlobalBest=particle(LOSER(i)).Best;
         end
     end
-    % 更新Ct
+    % update Ct
     gcount=gcount+1;
     if gcount<=NP
         GART(gcount).Cost= GlobalBest.Cost;
@@ -181,7 +181,7 @@ while it <= maxiter
 
     BestCost(it) = GlobalBest.Cost;
 
-        fprintf("EAPSO 第%d代，最佳适应度 = %e\n",it,BestValue);
+        fprintf("EAPSO  gen %d  best = %e\n",it,BestValue);
     
     if FEs >= MaxFEs
         break;

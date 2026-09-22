@@ -10,15 +10,15 @@ function [gbestx,gbestfitness,gbesthistory]=WGA(sequence,a,lengthdata,L,maxiter,
 nPop=120;
 nVar = dimension;
 % nVar=1000;
-nPop_Initial=nPop; % 初始种群规模
-nPop_Final=30; % 最终种群规模
+nPop_Initial=nPop; % initial population size
+nPop_Final=30; % final population size
 % CostFunction = Func;
 % MaxNFE=3e6;
 
 xmax=1;
 xmin=0;
 
-% 近似最大迭代次数
+% approximate maximum number of iterations
 % MaxIter0=ceil(MaxNFE/((nPop_Initial+nPop_Final)/2));   % Approximate Maximum Iterations
 
 Cr=0.5;
@@ -39,7 +39,7 @@ for i=1:nPop
     Position(i,:)=xmin+(xmax-xmin)*rand(1,nVar);
     Cost(i)=fitness(sequence,a,lengthdata,L,Position(i,:));
     %NFE=NFE+1;
-    PbestPosition(i,:)=Position(i,:);% 个体最优
+    PbestPosition(i,:)=Position(i,:);% individual best
     PbestCost(i)=Cost(i);
     PbestVel(i,:)=Velocity(i,:);
     
@@ -50,7 +50,7 @@ for i=1:nPop
     end
 
 %     gbesthistory(NFE)=Gbest.Cost;
-%     fprintf("WGA 第%d次评价，最佳适应度 = %e\n",NFE,Gbest.Cost);
+%     fprintf("WGA  FE %d  best = %e\n",NFE,Gbest.Cost);
 end
 % NFE=NFE+nPop;
 
@@ -58,9 +58,9 @@ iter=0;
 while iter<maxiter
     iter=iter+1;
     
-    [hh, gg]=sort(PbestCost,'descend'); % 排序，升序
+    [hh, gg]=sort(PbestCost,'descend'); % sort, ascending
     
-    nPop=(nPop_Initial-1)-((nPop_Initial-nPop_Final)*(iter/maxiter)); % 种群规模线性缩减
+    nPop=(nPop_Initial-1)-((nPop_Initial-nPop_Final)*(iter/maxiter)); % linear reduction of the population size
     nPop=round(nPop+1);
     nPop=max(nPop,nPop_Final);
     nPop=min(nPop_Initial,nPop);
@@ -68,35 +68,35 @@ while iter<maxiter
     
     for eee=1:nPop
         
-        if B6==0 % 如果初始种群规模==最终种群规模，这里应该运行不到
+        if B6==0 % if the initial population size == the final population size, this branch should never be reached
             i=eee;
         else
-            i=gg(eee);% 直接到这里，i=适应度值排序值为eee的个体索引
+            i=gg(eee);% jump straight here, i = index of the individual whose fitness rank is eee
         end
-        [~, f2]=find(gg==i); % f2为该个体
+        [~, f2]=find(gg==i); % f2 is this individual
         
         %%% Worst
-        if f2==nPop % 全局最差
+        if f2==nPop % global worst
             f2=0;
         end
-        jj1=gg(1,f2+1); % 排名后面一个个体的索引号
+        jj1=gg(1,f2+1); % index of the individual one rank behind
 
         %%% BETTER
         [~, f2]=find(gg==i);
         tt=1;
-        if f2==1 % 全局最优
+        if f2==1 % global best
             f2=nPop+1;
             tt=-1;
         end
         
-        jj2=gg(1,f2-1); % 排名前面一个个体的索引号
+        jj2=gg(1,f2-1); % index of the individual one rank ahead
         if f2==2
             f2=nPop+2;
         end
         
-        jj3=gg(1,f2-2); % 排名前面两个的索引号
-        jjj=gg(1,1); % 全局最优
-        ff1=gg(1,end); % 全局最差
+        jj3=gg(1,f2-2); % index of the individual two ranks ahead
+        jjj=gg(1,1); % global best
+        ff1=gg(1,end); % global worst
         
         Velocity(i,:)= (rand(1,nVar).*Velocity(i,:)+rand(1,nVar).*(Velocity(jj2,:)-Velocity(jj1,:)))+rand(1,nVar).*(PbestPosition(i,:)-Position(jj1,:))+rand(1,nVar).*(PbestPosition(jj2,:)-Position(i,:))-rand(1,nVar).*(PbestPosition(jj1,:)-Position(jj3,:))+rand(1,nVar).*(PbestPosition(jj3,:)-Position(jj2,:));%%ORIGINAL
         
@@ -110,14 +110,14 @@ while iter<maxiter
         
         DE1=((PbestPosition(jj2,:)-PbestPosition(i,:)));
         
-        % 变异
+        % mutation
         for ww=1:nVar
             if rand<Cr
                 Position(i,ww)=PbestPosition(i,ww)+rand*rand*(DE1(ww));
             end
         end
         
-        Position(i,:)=min(max(Position(i,:),xmin),xmax); % 边界控制
+        Position(i,:)=min(max(Position(i,:),xmin),xmax); % boundary control
         
         Cost(i)=fitness(sequence,a,lengthdata,L,Position(i,:));
         %NFE=NFE+1;
@@ -139,7 +139,7 @@ while iter<maxiter
         
     end
     gbesthistory(iter)=Gbest.Cost;
-    fprintf("WGA 第%d代，最佳适应度 = %e\n",iter,Gbest.Cost);
+    fprintf("WGA  gen %d  best = %e\n",iter,Gbest.Cost);
     
 end
 

@@ -4,194 +4,197 @@
 %  This code is released for academic and research use.
 %  Please cite the related paper when using or modifying.
 % =========================================================================
-%  Function
-%     [gbestX, gbestFitness, gbestHistory] = HSLSO(popsize, dimension, xmax, xmin, maxiter, Func, FuncId, opts)
-%
-%  Inputs
-%     popsize    : population size (e.g., 400)
-%     dimension  : decision dimension
-%     xmax, xmin : box constraints (scalar or 1-by-D vectors)
-%     maxiter    : maximum iterations (MaxFEs = popsize * maxiter)
-%     Func       : function handle, f = Func(x, FuncId); x is column vector
-%     FuncId     : benchmark/problem id passed to Func
-%     opts       : (optional) struct with fields:
-%                  .NLayers  (default: 10)         number of hierarchy layers
-%                  .phi      (default: 0.3)        second-exemplar weight
-%                  .verbose  (default: true)       print progress
-%                  .seed     (default: [])         rng seed (e.g., 42)
-%                  .vmaxRate (default: 0.2)        vmax = vmaxRate*(xmax-xmin)
-%
-%  Outputs
-%     gbestX        : best solution found (1-by-D)
-%     gbestFitness  : best fitness value
-%     gbestHistory  : best-so-far curve over FEs (length = MaxFEs)
+%  Standalone version.
+%  PlatLSGO/Algorithms/HSLSO/HSLSO.m is the copy the benchmark platform
+%  calls. The two are identical -- same parameter list, same body -- and
+%  either can be used as a drop-in comparison algorithm on the platform.
 % =========================================================================
-function [gbestX, gbestFitness, gbestHistory] = HSLSO(popsize, dimension, xmax, xmin, maxiter, Func, FuncId, opts)
+function [gbestx,bestever,gbesthistory] = HSLSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
+%  Inputs
+%     popsize       population size, a multiple of N (fixed to 400 below)
+%     dimension     decision dimension D
+%     xmax, xmin    box constraints, scalar or 1-by-D
+%     vmax, vmin    velocity bounds, used to seed the initial velocity
+%     maxiter       kept for interface compatibility; the budget actually
+%                   consumed is MaxFEs, set below
+%     fCalculation  objective handle, f = fCalculation(x,FuncId) with x a
+%                   column vector
+%     FuncId        problem id forwarded to fCalculation
+%  Outputs
+%     gbestx        best solution found, 1-by-D
+%     bestever      best fitness value
+%     gbesthistory  best-so-far value indexed by FEs, length MaxFEs
+%
 
-    % -------------------------
-    % Parameters & preparation
-    % -------------------------
-    if nargin < 8 || isempty(opts), opts = struct(); end
-    NLayers  = getOpt(opts, 'NLayers', 10);
-    phi      = getOpt(opts, 'phi', 0.3);
-    verbose  = getOpt(opts, 'verbose', true);
-    seed     = getOpt(opts, 'seed', []);
-    vmaxRate = getOpt(opts, 'vmaxRate', 0.2);
+%% ===================== 1. Parameter settings ===========================
+% All algorithm constants live in this block, so a run is re-configured
+% from one place. The population is split into N fitness levels of m
+% particles each.
+popsize = 400;                      % Fixed population size, a multiple of N
+if nargin < 2
+    popsize = 400;
+end
 
-    if ~isempty(seed), rng(seed); end
+N = 10;                             % Number of fitness levels NL
+m = popsize/N;                      % Number of particles in each level PopL
+phi = 0.3;                          % phi in Eq. (4)
+FEs = 0;                            % Fitness evaluations consumed so far
+MaxFEs = 3e6;                       % Evaluation budget of one run
 
-    MaxFEs = popsize * maxiter;
-    ComputeFitness = Func;
+ComputeFitness = fCalculation;      % Objective handle used throughout
 
-    % Broadcast bounds if scalar
-    if isscalar(xmax), xmax = repmat(xmax, 1, dimension); end
-    if isscalar(xmin), xmin = repmat(xmin, 1, dimension); end
+% Update probability of each level at the start and at the end of a run.
+% The two vectors are linearly interpolated in between: Eq. (7).
+PLinit = (1:N)/N;
+PLfina = 1-PLinit;
 
-    % Velocity bounds (fraction of search range)
-    vmag  = vmaxRate * (xmax - xmin);
-    vmax  =  vmag;
-    vmin  = -vmag;
+% Column offsets that map a level index onto the popsize-by-dimension
+% personal-best matrix, one offset per dimension.
+baseIndex = (0:dimension-1)*popsize;
 
-    % Layering
-    N = NLayers;
-    m = floor(popsize / N);                  % individuals per layer
-    if m * N ~= popsize
-        % enforce exact layering by truncating tail; or pad if desired
-        popsize = m * N;
-        if verbose
-            fprintf('[HSLSO] popsize adjusted to %d for %d uniform layers.\n', popsize, N);
-        end
-    end
+%% ===================== 2. Population initialization ====================
+% Positions are sampled uniformly in the box, velocities uniformly in the
+% velocity range. Velocities are never clamped during the search.
+p = zeros(popsize,dimension);       % Particle positions
+v = zeros(popsize,dimension);       % Particle velocities
+fitness = zeros(1,popsize);         % Fitness of the current positions
 
-    % Probability schedule for heterogeneous learning (layer-wise)
-    PLinit = (1:N) / N;
-    PLfina = 1 - PLinit;
+for i = 1:popsize
+    p(i,:) = xmin+(xmax-xmin).*rand(1,dimension);
+    v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
+    fitness(i) = ComputeFitness(p(i,:)',FuncId);
+end
 
-    % -------------------------
-    % Initialization
-    % -------------------------
-    P  = xmin + (xmax - xmin) .* rand(popsize, dimension);   % positions
-    V  = vmin + (vmax - vmin) .* rand(popsize, dimension);   % velocities
-    F  = zeros(popsize, 1);
+FEs = FEs+popsize;                  % Initialization costs popsize FEs
 
-    FEs = 0;
-    for i = 1:popsize
-        F(i) = ComputeFitness(P(i, :)', FuncId);
-    end
-    FEs = FEs + popsize;
+% The personal best starts at the current state; the global best is the
+% best of the personal bests.
+pbest = p;
+pbestfitness = fitness;
 
-    Pbest        = P;
-    PbestFitness = F;
+[bestever,id] = min(fitness);
+gbestx = p(id,:);
+gbesthistory = bestever*ones(FEs,1);    % Flat best-so-far so far
 
-    [gbestFitness, id] = min(F);
-    gbestX = P(id, :);
-    gbestHistory = gbestFitness * ones(MaxFEs, 1);
-    gbestHistory(1:FEs) = gbestFitness;
+%% ===================== 3. Main optimization loop =======================
+% One pass over the levels is one iteration. Level 1 is never updated and
+% keeps the best particles; every particle below it either follows the
+% hierarchical selection rule or keeps its state, according to PL.
+while FEs < MaxFEs
 
-    % -------------------------
-    % Main loop
-    % -------------------------
-    while FEs < MaxFEs
+    %% -- 3.1 Sort by fitness, then re-form the levels -------------------
+    % After sorting, level 1 holds the best particles and is preserved as
+    % is, which is what makes these "fitness levels".
+    [fitness,rank] = sort(fitness);
+    p = p(rank,:);
+    v = v(rank,:);
+    pbest = pbest(rank,:);
+    pbestfitness = pbestfitness(rank);
 
-        % ---- Rank & layer assignment (ascending fitness) ----
-        [F, rank]       = sort(F);
-        P               = P(rank, :);
-        V               = V(rank, :);
-        Pbest           = Pbest(rank, :);
-        PbestFitness    = PbestFitness(rank);
+    %% -- 3.2 Update every level below level 1 ---------------------------
+    for sub = 2:N
 
-        % ---- Heterogeneous selection-learning by layers ----
-        for sub = 2:N        % the best layer (sub==1) remains as elite buffer
-            PL = PLinit(sub) + (PLfina(sub) - PLinit(sub)) * (FEs / MaxFEs);
+        % Level-wise update probability, from PLinit down to PLfina as the
+        % budget is consumed: Eq. (7). Higher levels are therefore updated
+        % less often as the search converges.
+        PL = PLinit(sub)+(PLfina(sub)-PLinit(sub))*(FEs/MaxFEs);
 
-            for k = 1:m
-                if rand < PL
-                    idx = (sub - 1) * m + k;
+        for k = 1:m
 
-                    % ----- Choose learning exemplars (hierarchical selection) -----
-                    if sub == 2
-                        % learn from the top layer only
-                        aLayer = 1; bLayer = 1;
+            if rand < PL
+
+                i = (sub-1)*m+k;    % Row index of this particle
+
+                %% -- 3.2.1 Hierarchical selection of two exemplars ------
+                if sub == 2
+                    % Algorithm 1 -- level 2 has only level 1 above it, so
+                    % both exemplars are built dimension-wise from the
+                    % personal bests of level 1.
+                    rowsA = randi(m,1,dimension);
+                    rowsB = randi(m,1,dimension);
+                    learna = pbest(rowsA+baseIndex);
+                    learnb = pbest(rowsB+baseIndex);
+                else
+                    % Algorithm 2 -- the admissible range of superior levels
+                    % k_l contracts from (sub-1) towards 2 as FEs/MaxFEs goes
+                    % from 0 to 1, so late updates learn from the top levels.
+                    k_layers = ceil((sub-1)*(1-(FEs/MaxFEs)^2));
+                    k_layers = max(2,k_layers);
+
+                    % Draw two distinct superior levels e1 < e2 <= k_l.
+                    r = randperm(k_layers,2);
+                    if r(1) < r(2)
+                        a = r(1);
+                        b = r(2);
                     else
-                        % learn from two layers within the upper hierarchy
-                        k_layers = ceil((sub - 1) * (1 - (FEs / MaxFEs)^2));
-                        k_layers = max(k_layers, 2);
-                        rr = randperm(k_layers, 2);
-                        aLayer = min(rr); bLayer = max(rr);
+                        a = r(2);
+                        b = r(1);
                     end
 
-                    % random exemplars within chosen layers (use pbest)
-                    aIdx = (aLayer - 1) * m + randi(m);
-                    bIdx = (bLayer - 1) * m + randi(m);
-                    learnA = Pbest(aIdx, :);
-                    learnB = Pbest(bIdx, :);
+                    rowsA = (a-1)*m+randi(m,1,dimension);
+                    rowsB = (b-1)*m+randi(m,1,dimension);
+                    learna = pbest(rowsA+baseIndex);
+                    learnb = pbest(rowsB+baseIndex);
+                end
 
-                    % ----- Velocity & position update (level-aware heterogeneity) -----
-                    r1 = rand(1, dimension);
-                    r2 = rand(1, dimension);
-                    r3 = rand(1, dimension);
+                %% -- 3.2.2 Velocity and position update ------------------
+                % learna drives the cognitive term, learnb is scaled by phi:
+                % Eq. (4).
+                r1 = rand(1,dimension);
+                r2 = rand(1,dimension);
+                r3 = rand(1,dimension);
+                v(i,:) = r1.*v(i,:) ...
+                    + r2.*(learna-p(i,:)) ...
+                    + phi.*r3.*(learnb-p(i,:));
 
-                    V(idx, :) = r1 .* V(idx, :) ...
-                              + r2 .* (learnA - P(idx, :)) ...
-                              + phi * r3 .* (learnB - P(idx, :));
+                p(i,:) = p(i,:)+v(i,:);
 
-                    % clamp velocity
-                    V(idx, :) = max(min(V(idx, :), vmax), vmin);
+                %% -- 3.2.3 Boundary handling ----------------------------
+                % Positions are clamped into the box; velocities are not.
+                p(i,:) = max(p(i,:),xmin);
+                p(i,:) = min(p(i,:),xmax);
 
-                    % position update + box constraints
-                    P(idx, :) = P(idx, :) + V(idx, :);
-                    P(idx, :) = max(min(P(idx, :), xmax), xmin);
+                %% -- 3.2.4 Evaluation ------------------------------------
+                fitness(i) = ComputeFitness(p(i,:)',FuncId);
+                FEs = FEs+1;
 
-                    % evaluate
-                    F(idx) = ComputeFitness(P(idx, :)', FuncId);
-                    FEs = FEs + 1;
+                %% -- 3.2.5 Personal best update --------------------------
+                if fitness(i) < pbestfitness(i)
+                    pbestfitness(i) = fitness(i);
+                    pbest(i,:) = p(i,:);
+                end
 
-                    % personal best
-                    if F(idx) < PbestFitness(idx)
-                        PbestFitness(idx) = F(idx);
-                        Pbest(idx, :)     = P(idx, :);
-                    end
+                %% -- 3.2.6 Global best update ----------------------------
+                if fitness(i) < bestever
+                    bestever = fitness(i);
+                    gbestx = p(i,:);
+                end
 
-                    % global best
-                    if F(idx) < gbestFitness
-                        gbestFitness = F(idx);
-                        gbestX       = P(idx, :);
-                    end
+                %% -- 3.2.7 Progress and termination ----------------------
+                gbesthistory(FEs) = bestever;
+                if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
+                    fprintf("HSLSO  FE %d  best = %e\n",FEs,bestever);
+                end
 
-                    % history
-                    if FEs <= MaxFEs
-                        gbestHistory(FEs) = gbestFitness;
-                    end
-
-                    if verbose && mod(FEs, 1000) == 0
-                        fprintf('[HSLSO] FEs=%8d | gbest=%.8e\n', FEs, gbestFitness);
-                    end
-
-                    if FEs >= MaxFEs
-                        break;
-                    end
+                if FEs >= MaxFEs
+                    break;              % Budget exhausted inside the level
                 end
             end
-            if FEs >= MaxFEs
-                break;
-            end
+        end
+
+        if FEs >= MaxFEs
+            break;                      % Budget exhausted between levels
         end
     end
-
-    % fill tail (if early exits happen exactly at MaxFEs, this is a no-op)
-    if FEs < MaxFEs
-        gbestHistory(FEs+1:MaxFEs) = gbestFitness;
-    end
 end
 
-% =========================
-% Helpers (local functions)
-% =========================
-function val = getOpt(s, name, defaultVal)
-    if isfield(s, name) && ~isempty(s.(name))
-        val = s.(name);
-    else
-        val = defaultVal;
-    end
+%% ===================== 4. History completion ===========================
+% The loop can leave the tail of gbesthistory unwritten, and can overshoot
+% MaxFEs by up to one level. Pad with the last value, or trim.
+if FEs < MaxFEs
+    gbesthistory(FEs+1:MaxFEs) = bestever;
+elseif FEs > MaxFEs
+    gbesthistory(MaxFEs+1:end) = [];
 end
 
+end

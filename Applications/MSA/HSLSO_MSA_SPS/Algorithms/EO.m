@@ -81,7 +81,7 @@ C_pool=[Ceq1; Ceq2; Ceq3; Ceq4; Ceq_ave];                     % Equilibrium pool
        Convergence_curve(Iter)=Ceq1_fit; 
        gbestx=Ceq1;
        gbestfitness=Ceq1_fit;
-       fprintf("EO算法,第%d代，最佳适应度 = %e\n",Iter,gbestfitness);
+       fprintf("EO  gen %d  best = %e\n",Iter,gbestfitness);
 end
 gbesthistory=Convergence_curve;
 

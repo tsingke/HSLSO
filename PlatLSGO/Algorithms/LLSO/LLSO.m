@@ -1,4 +1,4 @@
-function [gbestX, gbestfitness, gbesthistory] = LLSO(mainHandle, PopSize, D, xmax, xmin, vmax, vmin, MaxIter, fCalculation, FuncId, VisualSwitch)
+function [gbestX, gbestfitness, gbesthistory] = LLSO(PopSize, D, xmax, xmin, vmax, vmin, MaxIter, fCalculation, FuncId)
 
 PopSize = 500;
 phi = 0.4;
@@ -79,7 +79,7 @@ while FEs < MaxFEs
             gbesthistory(FEs) = gbestfitness;
 
             if mod(FEs, floor(MaxFEs/10)) == 0
-                fprintf('LLSO 第%d次评价，最佳适应度 = %e\n', FEs, gbestfitness);
+                fprintf('LLSO  FE %d  best = %e\n', FEs, gbestfitness);
             end
         end
 
@@ -137,7 +137,7 @@ while FEs < MaxFEs
             gbesthistory(FEs) = gbestfitness;
 
             if mod(FEs, floor(MaxFEs/10)) == 0
-                fprintf('LLSO 第%d次评价，最佳适应度 = %e\n', FEs, gbestfitness);
+                fprintf('LLSO  FE %d  best = %e\n', FEs, gbestfitness);
             end
         end
     end

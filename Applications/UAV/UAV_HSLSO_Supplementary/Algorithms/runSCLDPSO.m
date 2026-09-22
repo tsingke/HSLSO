@@ -1,7 +1,7 @@
 function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax, xmin, maxiter)
-    % 参数初始化
+    % Parameter initialization
     N = 10;
-    % 确保 popsize 能被 N 整除，避免索引越界
+    % Ensure popsize is divisible by N to avoid an index out of range
     if mod(popsize, N) ~= 0
         m = floor(popsize / N);
         popsize = m * N;
@@ -9,7 +9,7 @@ function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax
         m = popsize / N;
     end
 
-    % 动态计算速度边界
+    % Compute the velocity bounds dynamically
     vmax = (xmax - xmin) * 0.2;
     vmin = -vmax;
     
@@ -17,12 +17,12 @@ function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax
     FEs = 0;
     MaxFEs = popsize * maxiter;
     
-    % 初始化种群与速度
+    % Initialize the population and velocity
     p = xmin + (xmax - xmin) .* rand(popsize, dimension);
     v = vmin + (vmax - vmin) .* rand(popsize, dimension);
     fitness = zeros(popsize, 1);
     
-    % 初始评估
+    % Initial evaluation
     for i = 1:popsize
         fitness(i) = Fitness(p(i, :)');
     end
@@ -33,17 +33,17 @@ function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax
     [bestever, id] = min(fitness);
     gbestx = p(id, :);
     
-    % 统一历史记录维度为 maxiter
+    % Unify the history record dimension to maxiter
     gbesthistory = zeros(1, maxiter);
     iter = 1;
     gbesthistory(iter) = bestever;
     
-    % 主循环
+    % Main loop
     while FEs < MaxFEs
         iter = iter + 1;
-        if iter > maxiter; break; end % 保护机制
+        if iter > maxiter; break; end % safeguard
         
-        % 排序和分层
+        % Sorting and layering
         [fitness, rank] = sort(fitness);
         p = p(rank, :);
         v = v(rank, :);
@@ -55,7 +55,7 @@ function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax
                 for k = 1:m
                     i = (sub - 1) * m + k;
                     
-                    % 学习范例选择 (采用向量化取法提速)
+                    % Learning exemplar selection (vectorized indexing for speed)
                     if sub == 2
                         learna = pbest(randperm(m, 1), :);
                         learnb = pbest(randperm(m, 1), :);
@@ -67,18 +67,18 @@ function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax
                         learnb = pbest((b - 1) * m + randperm(m, 1), :);
                     end
                     
-                    % 位置与速度更新
+                    % Position and velocity update
                     v(i, :) = rand(1, dimension) .* v(i, :) + rand(1, dimension) .* (learna - p(i, :)) + phi .* rand(1, dimension) .* (learnb - p(i, :));
                     p(i, :) = p(i, :) + v(i, :);
                     
-                    % 边界约束
+                    % Boundary constraint
                     p(i, :) = max(min(p(i, :), xmax), xmin);
                     
-                    % 适应度评价
+                    % Fitness evaluation
                     fitness(i) = Fitness(p(i, :)');
                     FEs = FEs + 1;
                     
-                    % 更新个体最优和全局最优
+                    % Update the personal best and the global best
                     if fitness(i) < pbestfitness(i)
                         pbestfitness(i) = fitness(i);
                         pbest(i, :) = p(i, :);
@@ -97,17 +97,17 @@ function [bestPath, gbesthistory] = runSCLDPSO(Fitness, popsize, dimension, xmax
                 break;
             end
         end
-        % 记录每一代的全局最优
+        % Record the global best of each generation
         gbesthistory(iter) = bestever;
     end
     
-    % 补齐未满的迭代历史（修复了原代码 gbestfitness 未定义的报错）
+    % Fill in the incomplete iteration history (fixes the undefined gbestfitness error of the original code)
     if iter < maxiter
         gbesthistory(iter+1:maxiter) = bestever;
     elseif iter > maxiter
         gbesthistory(maxiter+1:end) = [];
     end
     
-    % 输出格式转换为三维航点矩阵
+    % Convert the output format to a 3-D waypoint matrix
     bestPath = decodePath(gbestx);
 end

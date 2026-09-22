@@ -1,5 +1,5 @@
-function [gbestX,gbestfitness,gbesthistory]=TPCSO(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation, FuncId,VisualSwitch)
-% 复现版本
+function [gbestX,gbestfitness,gbesthistory]=TPCSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
+% Reproduction of the published algorithm
 popsize = 500;
 
 if FuncId == 13
@@ -20,7 +20,7 @@ T = round(MaxFEs/6);
 for i =1:popsize
     p(i,:) = xmin+(xmax-xmin).*rand(1,dimension);
     v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
-    fitness(i)= ComputeFitness(p(i,:)',FuncId); % 个体适应度  
+    fitness(i)= ComputeFitness(p(i,:)',FuncId); % Individual fitness
     FEs = FEs+1;
 end
 
@@ -29,14 +29,14 @@ gbestX = p(id,:);
 gbesthistory = [gbestfitness*ones((FEs),1)];
 
 while FEs < MaxFEs
-    % 随机分成两个子种群
+    % Randomly split into two subpopulations
     sub1 = p(1:ceil(popsize/2),:); 
     sub2 = p(floor(popsize/2) + 1:popsize,:);
 
     l1 = size(sub1,1);
     l2 = size(sub2,1);
 
-    % 生成随机粒子对
+    % Generate random particle pairs
     rlist1 = randperm(l1);
     rpairs1 = [rlist1(1:ceil(l1/2)); rlist1(floor(l1/2) + 1:l1)]';
 
@@ -48,7 +48,7 @@ while FEs < MaxFEs
     center2 = mean(sub2);
     
     % do pairwise competitions
-    % 子种群1
+    % Subpopulation 1
     for i = 1:ceil(l1/2)
         if (fitness(rpairs1(i,1))<fitness(rpairs1(i,2)))
             losers1(i) = rpairs1(i,2);
@@ -57,7 +57,7 @@ while FEs < MaxFEs
             losers1(i) = rpairs1(i,1);
             winners1(i) = rpairs1(i,2);
         end
-        % 三阶段
+        % Three stages
         if FEs<=T
             v(losers1(i),:) = rand(1,dimension).*v(losers1(i),:)+rand(1,dimension).*(p(winners1(i),:)-p(losers1(i),:))+phi1*rand(1,dimension).*(center1-p(losers1(i),:));        
         elseif FEs<=(MaxFEs-T)
@@ -67,7 +67,7 @@ while FEs < MaxFEs
             
         end
         p(losers1(i),:)=p(losers1(i),:)+v(losers1(i),:);
-        % 位置边界控制
+        % Position boundary control
         p(losers1(i),:) = max(p(losers1(i),:), (lu(1, :)));
         p(losers1(i),:) = min(p(losers1(i),:), (lu(2, :)));
 
@@ -80,11 +80,11 @@ while FEs < MaxFEs
         end
         gbesthistory(FEs) = gbestfitness;
         if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-            fprintf("TPCSO算法，第%d次评价，最佳适应度=%e\n",FEs,gbestfitness);
+            fprintf("TPCSO  FE %d  best = %e\n",FEs,gbestfitness);
         end
     end
 
-    % 子种群2
+    % Subpopulation 2
     for i = 1:ceil(l2/2)
         if (fitness(rpairs2(i,1))<fitness(rpairs2(i,2)))
             losers2(i) = rpairs2(i,2);
@@ -93,7 +93,7 @@ while FEs < MaxFEs
             losers2(i) = rpairs2(i,1);
             winners2(i) = rpairs2(i,2);
         end
-        % 三阶段
+        % Three stages
         if FEs<=T
             v(losers2(i),:) = rand(1,dimension).*v(losers2(i),:)+rand(1,dimension).*(p(winners2(i),:)-p(losers2(i),:))+phi1*rand(1,dimension).*(center2-p(losers2(i),:));       
         elseif FEs<=(MaxFEs-T)
@@ -102,7 +102,7 @@ while FEs < MaxFEs
             v(losers2(i),:) = rand(1,dimension).*v(losers2(i),:)+rand(1,dimension).*(p(winners2(i),:)-p(losers2(i),:))+phi3*rand(1,dimension).*(gbestX-p(losers2(i),:));            
         end
         p(losers2(i),:)=p(losers2(i),:)+v(losers2(i),:);
-        % 位置边界控制
+        % Position boundary control
         p(losers2(i),:) = max(p(losers2(i),:), (lu(1, :)));
         p(losers2(i),:) = min(p(losers2(i),:), (lu(2, :)));
         fitness(losers2(i)) = ComputeFitness(p(losers2(i),:)',FuncId);
@@ -114,7 +114,7 @@ while FEs < MaxFEs
         end
         gbesthistory(FEs) = gbestfitness;
         if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-            fprintf("TPCSO算法，第%d次评价，最佳适应度=%e\n",FEs,gbestfitness);
+            fprintf("TPCSO  FE %d  best = %e\n",FEs,gbestfitness);
         end
     end
 

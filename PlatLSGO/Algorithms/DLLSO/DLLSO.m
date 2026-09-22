@@ -1,5 +1,4 @@
-function [gbestx,bestever,gbesthistory] = DLLSO(mainHandle,popsize,dimension,...
-    xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId,VisualSwitch)
+function [gbestx,bestever,gbesthistory] = DLLSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 
 % ==============================================================
 % Dynamic Level-Based Learning Swarm Optimizer (DLLSO)
@@ -8,13 +7,13 @@ function [gbestx,bestever,gbesthistory] = DLLSO(mainHandle,popsize,dimension,...
 % "A Level-Based Learning Swarm Optimizer for Large-Scale Optimization"
 % IEEE Transactions on Evolutionary Computation, 2018
 %
-% 本版本适配当前平台接口：
+% This version is adapted to the current platform interface:
 %
-% function [gbestx,bestever,gbesthistory] = DLLSO( ...
-%     mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,...
-%     maxiter,fCalculation,FuncId,VisualSwitch)
+% function [gbestx,bestever,gbesthistory] = DLLSO(...
+%     popsize,dimension,xmax,xmin,vmax,vmin,...
+%     maxiter,fCalculation,FuncId)
 %
-% 对应论文 1000-D 实验参数：
+% Settings corresponding to the paper's 1000-D experiments:
 % NP  = 500
 % phi = 0.4
 % S   = {4,6,8,10,20,50}
@@ -23,32 +22,32 @@ function [gbestx,bestever,gbesthistory] = DLLSO(mainHandle,popsize,dimension,...
 % ==============================================================
 
 
-%% ===================== 参数设置 ===============================
+%% ===================== Parameter settings ===============================
 
-% 论文 1000-D 设置
+% Paper's 1000-D settings
 m = 500;                       % NP
-phi = 0.4;                     % 控制第二 exemplar 的影响
+phi = 0.4;                     % Controls the influence of the second exemplar
 
-% 动态层数候选集合
+% Candidate set of dynamic level numbers
 S = [4, 6, 8, 10, 20, 50];
 numS = length(S);
 
-% Eq. (8) 中每个候选层数对应的性能记录
-% 论文规定初始化全部为 1
+% Performance record for each candidate level number in Eq. (8)
+% The paper specifies that all entries are initialized to 1
 R = ones(1,numS);
 
 ComputeFitness = fCalculation;
 
 FEs = 0;
 
-% 1000维 CEC2010 / CEC2013 主实验评价次数
+% Number of FEs for the main 1000-D CEC2010 / CEC2013 experiments
 MaxFEs = 3e6;
 
-% 如果以后想严格按照 3000*D：
+% If you later want to strictly follow 3000*D:
 % MaxFEs = 3000 * dimension;
 
 
-%% ===================== 初始化种群 =============================
+%% ===================== Initialize population =============================
 
 p = zeros(m,dimension);
 v = zeros(m,dimension);
@@ -67,19 +66,19 @@ end
 FEs = FEs + m;
 
 
-%% ===================== 初始化全局最优 ==========================
+%% ===================== Initialize global best ==========================
 
 [bestever,id] = min(fitness);
 
 gbestx = p(id,:);
 
 
-%% ===================== 收敛历史 ===============================
+%% ===================== Convergence history ===============================
 
 gbesthistory = zeros(MaxFEs,1);
 
-% 和你当前 CSO 平台保持一致：
-% 初始化种群的 m 次评价统一记录初始化后的最优值
+% Kept consistent with your current CSO platform:
+% The m evaluations of the initial population all record the best value after initialization
 gbesthistory(1:FEs) = bestever;
 
 
@@ -87,14 +86,14 @@ gen = 1;
 
 
 %% ==============================================================
-%                      DLLSO 主循环
+%                      DLLSO main loop
 % ==============================================================
 
 while FEs < MaxFEs
 
 
     %% ----------------------------------------------------------
-    % 1. 根据 Eq. (9) 计算每个 NL 的选择概率
+    % 1. Compute the selection probability of each NL according to Eq. (9)
     %
     %             exp(7*r_i)
     % p_i = -----------------------
@@ -109,7 +108,7 @@ while FEs < MaxFEs
 
     %% ----------------------------------------------------------
     % 2. Roulette Wheel Selection
-    %    动态选择当前这一代的层数 NL
+    %    Dynamically select the level number NL for the current generation
     % -----------------------------------------------------------
 
     cumulativeProb = cumsum(prob);
@@ -122,22 +121,22 @@ while FEs < MaxFEs
 
 
     %% ----------------------------------------------------------
-    % 记录本代更新前的 global best
-    % 用于 Eq. (8)
+    % Record the global best before this generation's update
+    % Used for Eq. (8)
     % -----------------------------------------------------------
 
     oldBest = bestever;
 
 
     %% ----------------------------------------------------------
-    % 3. 按 fitness 升序排列粒子
+    % 3. Sort particles in ascending order of fitness
     %
-    % fitness 越小越好
+    % Smaller fitness is better
     %
-    % L1：最好
-    % L2：次好
+    % L1: best
+    % L2: second best
     % ...
-    % LNL：最差
+    % LNL: worst
     %
     % -----------------------------------------------------------
 
@@ -145,12 +144,12 @@ while FEs < MaxFEs
 
 
     %% ----------------------------------------------------------
-    % 4. 将种群划分为 NL 个层
+    % 4. Divide the population into NL levels
     %
-    % 论文：
+    % The paper:
     % LS = floor(NP/NL)
     %
-    % 如果不能整除，剩余粒子全部加入最低层 LNL
+    % If the division is not exact, all remaining particles join the lowest level LNL
     %
     % -----------------------------------------------------------
 
@@ -168,28 +167,28 @@ while FEs < MaxFEs
 
     end
 
-    % 最后一层包含所有剩余粒子
+    % The last level contains all remaining particles
     startIndex = (NL-1)*LS + 1;
 
     levels{NL} = rankIndex(startIndex:m);
 
 
     %% ==========================================================
-    % 5. 更新 LNL, LNL-1, ..., L3
+    % 5. Update LNL, LNL-1, ..., L3
     %
     % Algorithm 1:
     %
     % for i = NL,...,3
     %
-    % 从前 i-1 个更高层中随机选择两个不同的层：
+    % Randomly select two distinct levels from the first i-1 higher levels:
     %
-    % L_rl1 和 L_rl2
+    % L_rl1 and L_rl2
     %
-    % 且：
+    % with:
     %
     % rl1 < rl2 < i
     %
-    % 分别从两个层中随机选择一个 exemplar。
+    % Randomly select one exemplar from each of the two levels.
     %
     % ==========================================================
 
@@ -208,7 +207,7 @@ while FEs < MaxFEs
 
 
             %% --------------------------------------------------
-            % 从更高的 level 中随机选择两个不同的层
+            % Randomly select two distinct levels from the higher levels
             % ---------------------------------------------------
 
             selectedLevels = randperm(level-1,2);
@@ -217,14 +216,14 @@ while FEs < MaxFEs
             rl2 = selectedLevels(2);
 
 
-            % 保证 rl1 < rl2
+            % Ensure rl1 < rl2
             %
-            % level index 越小，level 越高
+            % The smaller the level index, the higher the level
             %
-            % 因此：
+            % Therefore:
             %
-            % exemplar1 来自更好的层
-            % exemplar2 来自相对较差的高层
+            % exemplar1 comes from a better level
+            % exemplar2 comes from a relatively worse higher level
             %
 
             if rl2 < rl1
@@ -237,7 +236,7 @@ while FEs < MaxFEs
 
 
             %% --------------------------------------------------
-            % 分别从 L_rl1 和 L_rl2 随机选择一个粒子
+            % Randomly select one particle from L_rl1 and one from L_rl2
             % ---------------------------------------------------
 
             group1 = levels{rl1};
@@ -258,8 +257,8 @@ while FEs < MaxFEs
             % + r2*(X_rl1,k1 - X_i)
             % + phi*r3*(X_rl2,k2 - X_i)
             %
-            % 注意：
-            % r1、r2、r3 都是 dimension 维随机向量
+            % Note:
+            % r1, r2, r3 are all dimension-dimensional random vectors
             %
             % ---------------------------------------------------
 
@@ -281,9 +280,9 @@ while FEs < MaxFEs
 
 
             %% --------------------------------------------------
-            % 边界处理
+            % Boundary handling
             %
-            % 这里沿用你的 CSO 平台处理方式
+            % Here we follow your CSO platform's handling
             % ---------------------------------------------------
 
             p(currentID,:) = max(p(currentID,:),xmin);
@@ -301,7 +300,7 @@ while FEs < MaxFEs
 
 
             %% --------------------------------------------------
-            % 更新 global best
+            % Update global best
             % ---------------------------------------------------
 
             if fitness(currentID) < bestever
@@ -316,18 +315,18 @@ while FEs < MaxFEs
             gbesthistory(FEs) = bestever;
 
 
-            %% 每 1000 次评价输出一次
+            %% Print once every 1000 evaluations
             if mod(FEs,1000) == 0
 
-                fprintf(['DLLSO算法,第%d次评价，' ...
-                    '最佳适应度 = %e，NL = %d\n'],...
+                fprintf(['DLLSO  FE %d  ' ...
+                    'best = %e, NL = %d\n'],...
                     FEs,bestever,NL);
 
             end
 
 
             %% --------------------------------------------------
-            % 达到最大评价次数立即结束
+            % Stop immediately once the maximum number of FEs is reached
             % ---------------------------------------------------
 
             if FEs >= MaxFEs
@@ -356,17 +355,17 @@ while FEs < MaxFEs
 
 
     %% ==========================================================
-    % 6. 单独更新第二层 L2
+    % 6. Update the second level L2 separately
     %
     % Algorithm 1 Lines 22-32
     %
-    % L2 没有两个不同的 higher levels 可以选，
-    % 所以：
+    % L2 has no two distinct higher levels to choose from,
+    % so:
     %
-    % 两个 exemplar 都从 L1 中随机选取。
+    % Both exemplars are randomly selected from L1.
     %
-    % fitness 更好的那个作为 exemplar1，
-    % 较差的作为 exemplar2。
+    % The one with better fitness serves as exemplar1,
+    % the worse one as exemplar2.
     %
     % ==========================================================
 
@@ -381,7 +380,7 @@ while FEs < MaxFEs
 
 
         %% ------------------------------------------------------
-        % 从第一层随机选择两个不同粒子
+        % Randomly select two distinct particles from the first level
         % -------------------------------------------------------
 
         selectedParticles = randperm(length(level1Particles),2);
@@ -393,8 +392,8 @@ while FEs < MaxFEs
         %% ------------------------------------------------------
         % Algorithm 1:
         %
-        % 更好的粒子作为 X_1,k1
-        % 较差粒子作为 X_1,k2
+        % The better particle serves as X_1,k1
+        % The worse particle serves as X_1,k2
         % -------------------------------------------------------
 
         if fitness(exemplar2) < fitness(exemplar1)
@@ -425,7 +424,7 @@ while FEs < MaxFEs
         p(currentID,:) = p(currentID,:) + v(currentID,:);
 
 
-        %% 与平台统一的边界处理
+        %% Boundary handling consistent with the platform
 
         p(currentID,:) = max(p(currentID,:),xmin);
         p(currentID,:) = min(p(currentID,:),xmax);
@@ -455,8 +454,8 @@ while FEs < MaxFEs
 
         if mod(FEs,1000) == 0
 
-            fprintf(['DLLSO算法,第%d次评价，' ...
-                '最佳适应度 = %e，NL = %d\n'],...
+            fprintf(['DLLSO  FE %d  ' ...
+                'best = %e, NL = %d\n'],...
                 FEs,bestever,NL);
 
         end
@@ -474,29 +473,29 @@ while FEs < MaxFEs
 
 
     %% ==========================================================
-    % 注意：
+    % Note:
     %
-    % 第一层 L1 完全不更新。
+    % The first level L1 is not updated at all.
     %
-    % 根据论文：
+    % According to the paper:
     %
     % "particles in the first level directly enter
     %  the next generation"
     %
-    % 因此这里没有 L1 更新代码。
+    % Therefore there is no L1 update code here.
     % ==========================================================
 
 
     %% ==========================================================
     % 7. Eq. (8)
     %
-    % 更新刚才被选择的 NL 对应的性能记录 r_i
+    % Update the performance record r_i of the NL that was just selected
     %
     %                 |F_old - F_new|
     % r_i = --------------------------------
     %                       |F_old|
     %
-    % 其他候选 NL 的记录保持不变。
+    % The records of the other candidate NLs remain unchanged.
     %
     % ==========================================================
 
@@ -507,8 +506,8 @@ while FEs < MaxFEs
 
     else
 
-        % 已达到 0 时无法继续计算相对改善率。
-        % 防止 0/0 导致 NaN。
+        % Once 0 has been reached, the relative improvement rate can no longer be computed.
+        % Prevents 0/0 from producing NaN.
         R(selectedIndex) = 0;
 
     end
@@ -525,7 +524,7 @@ end
 
 
 %% ==============================================================
-% 收敛历史长度处理
+% Handling the convergence history length
 % ==============================================================
 
 if FEs < MaxFEs

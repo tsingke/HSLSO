@@ -1,4 +1,4 @@
-function [gbestx,gbestfitness,gbesthistory]=WGA(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,Func,FuncId,VisualSwitch)
+function [gbestx,gbestfitness,gbesthistory]=WGA(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,Func,FuncId)
 % M. Ghasemi, A. Rahimnejad, R. Hemmati, E. Akbari, and S. A. Gadsden,
 % “Wild Geese Algorithm: A novel algorithm for large scale optimization
 % based on the natural life and death of wild geese,” 
@@ -10,12 +10,12 @@ function [gbestx,gbestfitness,gbesthistory]=WGA(mainHandle,popsize,dimension,xma
 nPop=popsize;
 nVar = dimension;
 % nVar=1000;
-nPop_Initial=nPop; % 初始种群规模
-nPop_Final=popsize/4; % 最终种群规模
+nPop_Initial=nPop; % Initial swarm size
+nPop_Final=popsize/4; % Final swarm size
 CostFunction = Func;
 MaxNFE=10000*dimension;
 
-% 近似最大迭代次数
+% Approximate maximum number of iterations
 MaxIter0=ceil(MaxNFE/((nPop_Initial+nPop_Final)/2));   % Approximate Maximum Iterations
 
 Cr=0.5;
@@ -36,7 +36,7 @@ for i=1:nPop
     Position(i,:)=xmin+(xmax-xmin)*rand(1,nVar);
     Cost(i)=CostFunction(Position(i,:)',FuncId);
     NFE=NFE+1;
-    PbestPosition(i,:)=Position(i,:);% 个体最优
+    PbestPosition(i,:)=Position(i,:);% Personal best
     PbestCost(i)=Cost(i);
     PbestVel(i,:)=Velocity(i,:);
     
@@ -48,7 +48,7 @@ for i=1:nPop
 
     gbesthistory(NFE)=Gbest.Cost;
     if mod(NFE, floor(MaxNFE/10)) == 0 && NFE <= MaxNFE
-        fprintf("WGA 第%d次评价，最佳适应度 = %e\n",NFE,Gbest.Cost);
+        fprintf("WGA  FE %d  best = %e\n",NFE,Gbest.Cost);
     end
 end
 % NFE=NFE+nPop;
@@ -57,9 +57,9 @@ iter=0;
 while NFE<=MaxNFE
     iter=iter+1;
     
-    [hh, gg]=sort(PbestCost); % 排序，升序
+    [hh, gg]=sort(PbestCost); % Sort in ascending order
     
-    nPop=(nPop_Initial-1)-((nPop_Initial-nPop_Final)*(NFE/MaxNFE)); % 种群规模线性缩减
+    nPop=(nPop_Initial-1)-((nPop_Initial-nPop_Final)*(NFE/MaxNFE)); % Swarm size shrinks linearly
     nPop=round(nPop+1);
     nPop=max(nPop,nPop_Final);
     nPop=min(nPop_Initial,nPop);
@@ -67,35 +67,35 @@ while NFE<=MaxNFE
     
     for eee=1:nPop
         
-        if B6==0 % 如果初始种群规模==最终种群规模，这里应该运行不到
+        if B6==0 % If the initial swarm size == the final swarm size, this branch should never be reached
             i=eee;
         else
-            i=gg(eee);% 直接到这里，i=适应度值排序值为eee的个体索引
+            i=gg(eee);% Otherwise come here; i is the index of the individual whose sorted fitness rank is eee
         end
-        [~, f2]=find(gg==i); % f2为该个体
+        [~, f2]=find(gg==i); % f2 is that individual
         
         %%% Worst
-        if f2==nPop % 全局最差
+        if f2==nPop % Global worst
             f2=0;
         end
-        jj1=gg(1,f2+1); % 排名后面一个个体的索引号
+        jj1=gg(1,f2+1); % Index of the individual one rank behind
 
         %%% BETTER
         [~, f2]=find(gg==i);
         tt=1;
-        if f2==1 % 全局最优
+        if f2==1 % Global best
             f2=nPop+1;
             tt=-1;
         end
         
-        jj2=gg(1,f2-1); % 排名前面一个个体的索引号
+        jj2=gg(1,f2-1); % Index of the individual one rank ahead
         if f2==2
             f2=nPop+2;
         end
         
-        jj3=gg(1,f2-2); % 排名前面两个的索引号
-        jjj=gg(1,1); % 全局最优
-        ff1=gg(1,end); % 全局最差
+        jj3=gg(1,f2-2); % Index of the individual two ranks ahead
+        jjj=gg(1,1); % Global best
+        ff1=gg(1,end); % Global worst
         
         Velocity(i,:)= (rand(1,nVar).*Velocity(i,:)+rand(1,nVar).*(Velocity(jj2,:)-Velocity(jj1,:)))+rand(1,nVar).*(PbestPosition(i,:)-Position(jj1,:))+rand(1,nVar).*(PbestPosition(jj2,:)-Position(i,:))-rand(1,nVar).*(PbestPosition(jj1,:)-Position(jj3,:))+rand(1,nVar).*(PbestPosition(jj3,:)-Position(jj2,:));%%ORIGINAL
         
@@ -109,14 +109,14 @@ while NFE<=MaxNFE
         
         DE1=((PbestPosition(jj2,:)-PbestPosition(i,:)));
         
-        % 变异
+        % Mutation
         for ww=1:nVar
             if rand<Cr
                 Position(i,ww)=PbestPosition(i,ww)+rand*rand*(DE1(ww));
             end
         end
         
-        Position(i,:)=min(max(Position(i,:),xmin),xmax); % 边界控制
+        Position(i,:)=min(max(Position(i,:),xmin),xmax); % Boundary control
         
         Cost(i)=CostFunction(Position(i,:)',FuncId);
         NFE=NFE+1;
@@ -134,7 +134,7 @@ while NFE<=MaxNFE
         end
         gbesthistory(NFE)=Gbest.Cost;
         if mod(NFE, floor(MaxNFE/10)) == 0 && NFE <= MaxNFE
-            fprintf("WGA 第%d次评价，最佳适应度 = %e\n",NFE,Gbest.Cost);
+            fprintf("WGA  FE %d  best = %e\n",NFE,Gbest.Cost);
         end
         gbestx = Gbest.Position;
         gbestfitness = Gbest.Cost;

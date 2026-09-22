@@ -1,19 +1,19 @@
 function [bestPath, gbesthistory] = runSLPSO(Fitness, popsize_in, dimension, xmax, xmin, maxiter)
-    % 1. SLPSO 的自适应种群计算
+    % 1. Adaptive population size computation of SLPSO
     M = 100;
-    m = M + floor(dimension / 10); % 传入的 popsize_in 不用于初始化，用 m 代替
+    m = M + floor(dimension / 10); % The popsize_in argument is not used for initialization; m is used instead
     
-    % 2. 统一框架的最大预算 (确保与其他算法公平对比)
+    % 2. Maximum budget of the unified framework (ensures a fair comparison with the other algorithms)
     MaxFEs = popsize_in * maxiter; 
     FEs = 0;
     
     c3 = (dimension / M) * 0.01;
     PL = zeros(m, 1);
     for i = 1:m
-        PL(i) = (1 - (i - 1) / m)^log(sqrt(ceil(dimension / M))); % 学习概率
+        PL(i) = (1 - (i - 1) / m)^log(sqrt(ceil(dimension / M))); % Learning probability
     end
     
-    % 初始化种群
+    % Initialize the population
      p = xmin + (xmax - xmin) .* rand(m, dimension);
     fitness = zeros(m, 1);
     for i = 1:m
@@ -25,22 +25,22 @@ function [bestPath, gbesthistory] = runSLPSO(Fitness, popsize_in, dimension, xma
     [bestever, best_idx] = min(fitness);
     gbestx = p(best_idx, :);
     
-    % 初始化历史记录（按代数记录，对齐主框架作图）
+    % Initialize the history record (recorded per generation, aligned with the main framework's plotting)
     gbesthistory = zeros(1, maxiter);
     iter = 1;
     gbesthistory(iter) = bestever;
     
-    %% 主循环
+    %% Main loop
     while FEs < MaxFEs
         iter = iter + 1;
-        if iter > maxiter; break; end % 防止画图索引越界的保护
+        if iter > maxiter; break; end % guard against a plot index out of range
         
-        % 降序排序（差到好：排名 1 是最差，排名 m 是最好）
+        % Sort in descending order (worst to best: rank 1 is the worst, rank m is the best)
         [fitness, rank] = sort(fitness, 'descend');
         p = p(rank, :);
         v = v(rank, :);
         
-        % 更新历史最优
+        % Update the historical best
         current_besty = fitness(m);
         current_bestp = p(m, :);
         if current_besty < bestever
@@ -48,13 +48,13 @@ function [bestPath, gbesthistory] = runSLPSO(Fitness, popsize_in, dimension, xma
             gbestx = current_bestp;
         end
         
-        center = mean(p); % 当前种群平均位置
+        center = mean(p); % Mean position of the current population
         
         randco1 = rand(m, dimension);
         randco2 = rand(m, dimension);
         randco3 = rand(m, dimension);
         
-        % 寻找学习对象（必须比自己排名高）
+        % Find the learning target (must be ranked higher than itself)
         winidxmask = repmat((1:m)', [1, dimension]);
         winidx = winidxmask + ceil(rand(m, dimension) .* (m - winidxmask));
         
@@ -63,7 +63,7 @@ function [bestPath, gbesthistory] = runSLPSO(Fitness, popsize_in, dimension, xma
             pwin(:, j) = p(winidx(:, j), j);
         end
         
-        % 对除了最好粒子外的其他粒子进行概率更新
+        % Probabilistic update for all particles except the best one
         for i = 1:m-1
             if rand < PL(i)
                 v(i, :) = randco1(i, :) .* v(i, :) + ...
@@ -71,11 +71,11 @@ function [bestPath, gbesthistory] = runSLPSO(Fitness, popsize_in, dimension, xma
                           c3 * randco3(i, :) .* (center - p(i, :));
                 p(i, :) = p(i, :) + v(i, :);
                 
-                % 边界约束
+                % Boundary constraint
                 p(i, :) = max(p(i, :), xmin);
                 p(i, :) = min(p(i, :), xmax);
                 
-                % 适应度评价
+                % Fitness evaluation
                 fitness(i) = Fitness(p(i, :)');
                 FEs = FEs + 1;
                 
@@ -89,17 +89,17 @@ function [bestPath, gbesthistory] = runSLPSO(Fitness, popsize_in, dimension, xma
                 end
             end
         end
-        % 记录当代最佳
+        % Record the best of the current generation
         gbesthistory(iter) = bestever;
     end
     
-    % 补齐历史数据
+    % Fill in the history data
     if iter < maxiter
         gbesthistory(iter+1:maxiter) = bestever;
     elseif iter > maxiter
         gbesthistory(maxiter+1:end) = [];
     end
     
-    % 返回最优路径三维格式
+    % Return the best path in 3-D format
     bestPath = decodePath(gbestx);
 end

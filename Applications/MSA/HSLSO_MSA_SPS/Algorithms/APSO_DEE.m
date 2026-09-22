@@ -103,7 +103,7 @@ while gen <= maxiter
     gbestX = Position(id,:);
   
     %         fprintf(['APSO-DEE: The best and FEs of Function ', num2str(funcid), ' (', num2str(run), '):%e'],bestval)
-    fprintf("APSO-DEE 第%d代，最佳适应度 = %e\n",gen,gbestfitness);
+    fprintf("APSO-DEE  gen %d  best = %e\n",gen,gbestfitness);
     gen = gen + 1;
 
     mean_p = repmat(mean(Position),Npop,1);
@@ -112,7 +112,7 @@ while gen <= maxiter
 end
 end
 
-% 初始化函数
+% initialization function
 function [bestval,trace_val,trace_std,Position,Velocity,Fitness,fes] = initialization(lb,ub,Npop,Nvar,sequence,a,lengthdata,L)
 %Parameter initialization
 %     MaxFEs = 3000000;
@@ -149,8 +149,8 @@ converg_group(cn,1:work_list) = init_index;
 end
 
 function [Position] = FeasibleFunction(Position,lb,ub)
-%FEASIBLEFUNCTION 此处显示有关此函数的摘要
-%检查候选解的是否在定义范围之内
+%FEASIBLEFUNCTION summary of this function goes here
+%check whether the candidate solution lies within the defined range
 Position(Position > ub) = ub;
 Position(Position < lb) = lb;
 end

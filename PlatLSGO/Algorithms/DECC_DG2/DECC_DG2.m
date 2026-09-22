@@ -1,4 +1,4 @@
-function [gbestx,bestever,gbesthistory] = DECC_DG2(~,popsize,dimension,xmax,xmin,~,~,~,fCalculation,FuncId,~)
+function [gbestx,bestever,gbesthistory] = DECC_DG2(popsize, dimension, xmax, xmin, ~, ~, ~, fCalculation, FuncId)
 % DECC_DG2
 % -------------------------------------------------------------------------
 % DECC-DG2 adapted to the same interface style as the user's CSO code.

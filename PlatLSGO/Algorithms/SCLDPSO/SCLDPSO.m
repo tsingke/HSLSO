@@ -1,5 +1,5 @@
-function [gbestx,bestever,gbesthistory]=SCLDPSO(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation, FuncId,VisualSwitch)
-% 大规模优化的优势组合学习分布式粒子群优化(2023)
+function [gbestx,bestever,gbesthistory]=SCLDPSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
+% Distributed particle swarm optimization with superior combination learning for large-scale optimization (2023)
 popsize = 400;
 N = 10;
 m = popsize/N;
@@ -11,7 +11,7 @@ MaxFEs = 3e6;
 for i =1:popsize
     p(i,:)=xmin+(xmax-xmin).*rand(1,dimension);
     v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
-    fitness(i)= ComputeFitness(p(i,:)',FuncId); % 个体适应度    
+    fitness(i)= ComputeFitness(p(i,:)',FuncId); % Individual fitness
 end
 FEs = FEs+popsize;
 pbest = p;
@@ -68,7 +68,7 @@ while FEs < MaxFEs
         
                 gbesthistory(FEs) = bestever;
                 if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-                    fprintf("SCLDPSO算法,第%d次评价，最佳适应度 = %e\n",FEs,bestever);
+                    fprintf("SCLDPSO  FE %d  best = %e\n",FEs,bestever);
                 end
             end
         end

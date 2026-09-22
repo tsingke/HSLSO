@@ -1,4 +1,4 @@
-function [gbestx,bestever,gbesthistory]=CSO(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation, FuncId,VisualSwitch)
+function [gbestx,bestever,gbesthistory]=CSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 m = 500;
 ComputeFitness = fCalculation;
 phi = 0.1;
@@ -9,7 +9,7 @@ MaxFEs = 3e6;
 for i =1:m
     p(i,:)=xmin+(xmax-xmin).*rand(1,dimension);
     v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
-    fitness(i)= ComputeFitness(p(i,:)',FuncId); % 个体适应度    
+    fitness(i)= ComputeFitness(p(i,:)',FuncId); % Individual fitness
 end
 FEs = FEs+m;
 
@@ -22,14 +22,14 @@ gen = 1;
 
 while FEs < MaxFEs
 
-    % 随机构建竞争对
+    % Randomly construct competition pairs
     rlist = randperm(m);
     rpairs = [rlist(1:ceil(m/2)); rlist(floor(m/2) + 1:m)]';
         
-    % 计算中心位置
+    % Compute the center position
     center = mean(p);
         
-    % 粒子对竞争
+    % Particle pair competition
     mask = (fitness(rpairs(:,1))>fitness(rpairs(:,2)));
     for k = 1:ceil(m/2)
         if mask(k)==0
@@ -52,7 +52,7 @@ while FEs < MaxFEs
 
         gbesthistory(FEs) = bestever;
         if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-           fprintf("CSO算法,第%d次评价，最佳适应度 = %e\n",FEs,bestever);
+           fprintf("CSO  FE %d  best = %e\n",FEs,bestever);
         end
         
     end

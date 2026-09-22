@@ -1,8 +1,8 @@
-function [gbestx,bestever,gbesthistory]=HCLPSO(mainHandle,popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation, FuncId,VisualSwitch)
+function [gbestx,bestever,gbesthistory]=HCLPSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 
 
 popsize = 500;
-beta = 0.95; % 上述两个参数是通过参数敏感性分析得出的
+beta = 0.95; % The two parameters above were obtained through parameter sensitivity analysis
 sigma = 0.1;
 SPRmax = 0.9;
 SPRmin = 0.45;
@@ -11,11 +11,11 @@ ComputeFitness = fCalculation;
 FEs = 0;
 MaxFEs = 3e6;
 
-% 种群初始化
+% Swarm initialization
 for i =1:popsize
     p(i,:)=xmin+(xmax-xmin).*rand(1,dimension);
     v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
-    fitness(i)= ComputeFitness(p(i,:)',FuncId); % 个体适应度    
+    fitness(i)= ComputeFitness(p(i,:)',FuncId); % Individual fitness
 end
 FEs = FEs+popsize;
 
@@ -37,7 +37,7 @@ while FEs < MaxFEs
     pj = w./sum(w);
 
     for i = NSP+1:popsize
-        % 选择一个优等个体，应该有更简单的函数，但是我不会……
+        % Select an elite individual; there should be a simpler function for this, but I do not know it ...
         r = rand;
         sp = 0;
         for k = 1:NSP
@@ -61,7 +61,7 @@ while FEs < MaxFEs
 
         gbesthistory(FEs) = bestever;
         if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-            fprintf("HCLPSO算法,第%d次评价，最佳适应度 = %e\n",FEs,bestever);
+            fprintf("HCLPSO  FE %d  best = %e\n",FEs,bestever);
         end
     end
 
@@ -83,7 +83,7 @@ while FEs < MaxFEs
     
             gbesthistory(FEs) = bestever;
             if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
-                fprintf("HCLPSO算法,第%d次评价，最佳适应度 = %e\n",FEs,bestever);
+                fprintf("HCLPSO  FE %d  best = %e\n",FEs,bestever);
             end
         end
     end

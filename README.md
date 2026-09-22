@@ -103,7 +103,7 @@ CEC2010 (F1–F20) and CEC2013 (F1–F15), D = 1000, MaxFEs = 3e6 per run, 30 in
 
 HSLSO is compared against **21 algorithms**. Each is a folder under `PlatLSGO/Algorithms/`, all reached through the same interface; `PlatLSGO/Algorithms/MDG/` holds the decomposition data that `DECC_MDG` reads. Swarm sizes and references are tabulated in [`PlatLSGO/README.md`](PlatLSGO/README.md).
 
-| | | | | | |
+| | | | | | | |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | TPCSO | HCLPSO | SCLDPSO | DCSO | WGA | CSO | SLPSO |
 | APSO_DEE | EAPSO | CCOS | DECC_MDG | LLSO | DLLSO | RLLPSO |

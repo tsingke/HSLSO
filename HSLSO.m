@@ -85,8 +85,9 @@ gbesthistory = bestever*ones(FEs,1);    % Flat best-so-far so far
 while FEs < MaxFEs
 
     %% -- 3.1 Sort by fitness, then re-form the levels -------------------
-    % After sorting, level 1 holds the best particles and is preserved as
-    % is, which is what makes these "fitness levels".
+    % After sorting, particles are partitioned into fitness levels from best
+    % to worst. Level 1 contains the best-ranked particles and is retained
+    % without position updates during the current generation.
     [fitness,rank] = sort(fitness);
     p = p(rank,:);
     v = v(rank,:);
@@ -123,6 +124,7 @@ while FEs < MaxFEs
                     % Algorithm 2 -- the admissible range of superior levels
                     % k_l contracts from (sub-1) towards 2 as FEs/MaxFEs goes
                     % from 0 to 1, so late updates learn from the top levels.
+                    % Eq. (6): progress-dependent admissible superior-level range.
                     k_layers = ceil((sub-1)*(1-(FEs/MaxFEs)^2));
                     k_layers = max(2,k_layers);
 
@@ -153,6 +155,7 @@ while FEs < MaxFEs
                     + r2.*(learna-p(i,:)) ...
                     + phi.*r3.*(learnb-p(i,:));
 
+                % Eq. (5): HSLSO position update.
                 p(i,:) = p(i,:)+v(i,:);
 
                 %% -- 3.2.3 Boundary handling ----------------------------
@@ -178,9 +181,9 @@ while FEs < MaxFEs
 
                 %% -- 3.2.7 Progress and termination ----------------------
                 gbesthistory(FEs) = bestever;
-                %if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
+                if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
                     fprintf("HSLSO  FE %d  best = %e\n",FEs,bestever);
-                %end
+                end
 
                 if FEs >= MaxFEs
                     break;              % Budget exhausted inside the level

@@ -4,10 +4,10 @@
 %  This code is released for academic and research use.
 %  Please cite the related paper when using or modifying.
 % =========================================================================
-%  Standalone version.
-%  PlatLSGO/Algorithms/HSLSO/HSLSO.m is the copy the benchmark platform
-%  calls. The two are identical -- same parameter list, same body -- and
-%  either can be used as a drop-in comparison algorithm on the platform.
+%  Platform version.
+%  HSLSO.m at the repository root is the same algorithm in standalone form.
+%  The two are identical -- same parameter list, same body -- so this file
+%  can be swapped for any comparison algorithm on the platform.
 % =========================================================================
 function [gbestx,bestever,gbesthistory] = HSLSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
 %  Inputs
@@ -48,8 +48,9 @@ ComputeFitness = fCalculation;      % Objective handle used throughout
 PLinit = (1:N)/N;
 PLfina = 1-PLinit;
 
-% Column offsets that map a level index onto the popsize-by-dimension
-% personal-best matrix, one offset per dimension.
+% Column offsets used for vectorized dimension-wise exemplar construction.
+% For a row-index vector rows, pbest(rows+baseIndex) extracts one sampled
+% personal-best component from each decision dimension.
 baseIndex = (0:dimension-1)*popsize;
 
 %% ===================== 2. Population initialization ====================
@@ -77,9 +78,10 @@ gbestx = p(id,:);
 gbesthistory = bestever*ones(FEs,1);    % Flat best-so-far so far
 
 %% ===================== 3. Main optimization loop =======================
-% One pass over the levels is one iteration. Level 1 is never updated and
-% keeps the best particles; every particle below it either follows the
-% hierarchical selection rule or keeps its state, according to PL.
+% One pass over all fitness levels constitutes one generation. Level 1 is
+% retained without position updates during the current generation, whereas
+% particles in levels 2,...,NL participate in updating according to SAUC,
+% while their learning information is constructed through HSL.
 while FEs < MaxFEs
 
     %% -- 3.1 Sort by fitness, then re-form the levels -------------------
@@ -94,9 +96,12 @@ while FEs < MaxFEs
     %% -- 3.2 Update every level below level 1 ---------------------------
     for sub = 2:N
 
-        % Level-wise update probability, from PLinit down to PLfina as the
-        % budget is consumed: Eq. (7). Higher levels are therefore updated
-        % less often as the search converges.
+        % Eq. (7): Probability Stage-Aware Update Control.
+        % The level-wise update probability is linearly interpolated from PLinit
+        % to PLfina according to the consumed FE ratio. Inferior levels receive
+        % larger update probabilities in the early stage, whereas relatively
+        % superior non-elite levels receive larger update probabilities in the
+        % later stage.
         PL = PLinit(sub)+(PLfina(sub)-PLinit(sub))*(FEs/MaxFEs);
 
         for k = 1:m
@@ -105,7 +110,7 @@ while FEs < MaxFEs
 
                 i = (sub-1)*m+k;    % Row index of this particle
 
-                %% -- 3.2.1 Hierarchical selection of two exemplars ------
+                %% -- 3.2.1 Heterogeneous Selection Learning -----------------------------
                 if sub == 2
                     % Algorithm 1 -- level 2 has only level 1 above it, so
                     % both exemplars are built dimension-wise from the
@@ -138,8 +143,9 @@ while FEs < MaxFEs
                 end
 
                 %% -- 3.2.2 Velocity and position update ------------------
-                % learna drives the cognitive term, learnb is scaled by phi:
-                % Eq. (4).
+                % Eq. (4): HSLSO velocity update.
+                % The two attraction terms are guided by learna and learnb,
+                % respectively, with the second exemplar weighted by phi.
                 r1 = rand(1,dimension);
                 r2 = rand(1,dimension);
                 r3 = rand(1,dimension);
@@ -172,9 +178,9 @@ while FEs < MaxFEs
 
                 %% -- 3.2.7 Progress and termination ----------------------
                 gbesthistory(FEs) = bestever;
-                if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
+                %if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
                     fprintf("HSLSO  FE %d  best = %e\n",FEs,bestever);
-                end
+                %end
 
                 if FEs >= MaxFEs
                     break;              % Budget exhausted inside the level
@@ -189,8 +195,9 @@ while FEs < MaxFEs
 end
 
 %% ===================== 4. History completion ===========================
-% The loop can leave the tail of gbesthistory unwritten, and can overshoot
-% MaxFEs by up to one level. Pad with the last value, or trim.
+% Defensive history handling. Under the current FE-based termination
+% logic, the optimization normally terminates exactly when FEs reaches
+% MaxFEs.
 if FEs < MaxFEs
     gbesthistory(FEs+1:MaxFEs) = bestever;
 elseif FEs > MaxFEs

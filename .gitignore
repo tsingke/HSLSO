@@ -13,6 +13,11 @@
 *.mat~
 *.tmp
 
+# Playwright scratch output (page snapshots, screenshots). The browser tool
+# writes these into the repo root on every session; they are not part of the
+# source and were committed once by accident.
+.playwright-mcp/
+
 # PlatLSGO experiment output and runtime caches are ignored by
 # PlatLSGO/.gitignore, which is anchored to the platform root on purpose:
 # PlatLSGO/Algorithms/CCOS/*/rdg/results/ holds decomposition data that the

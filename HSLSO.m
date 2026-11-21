@@ -1,4 +1,3 @@
-
 % =========================================================================
 %  HSLSO: Heterogeneous Selection Learning Swarm Optimization (for LSGO)
 %  Copyright (c) 2026, Qingke Zhang @ SDNU CILab
@@ -9,268 +8,203 @@
 %  HSLSO.m at the repository root is the same algorithm in standalone form.
 %  The two are identical -- same parameter list, same body -- so this file
 %  can be swapped for any comparison algorithm on the platform.
+% =========================================================================
+function [gbestx,bestever,gbesthistory] = HSLSO(popsize,dimension,xmax,xmin,vmax,vmin,maxiter,fCalculation,FuncId)
+%  Inputs
+%     popsize       population size, a multiple of N (fixed to 400 below)
+%     dimension     decision dimension D
+%     xmax, xmin    box constraints, scalar or 1-by-D
+%     vmax, vmin    velocity bounds, used to seed the initial velocity
+%     maxiter       kept for interface compatibility; the budget actually
+%                   consumed is MaxFEs, set below
+%     fCalculation  objective handle, f = fCalculation(x,FuncId) with x a
+%                   column vector
+%     FuncId        problem id forwarded to fCalculation
+%  Outputs
+%     gbestx        best solution found, 1-by-D
+%     bestever      best fitness value
+%     gbesthistory  best-so-far value indexed by FEs, length MaxFEs
+%
 
-%% ======================= Parameter settings ============================
-
-popsize = 50;
-N = 10;
-m = popsize/N;
-
-phi = 0.3;
-
-xmax = 1;
-xmin = 0;
-vmax = 1;
-vmin = 0;
-
-historyPoints = max(1,round(historyPoints));
-
-% Default maximum FE budget.
-% This corresponds to the previous maximum possible FE count
-% under 200 generations, including initial population evaluations.
-if nargin < 7 || isempty(MaxFEs)
-    MaxFEs = popsize + historyPoints*(popsize-m);
+%% ===================== 1. Parameter settings ===========================
+% All algorithm constants live in this block, so a run is re-configured
+% from one place. The population is split into N fitness levels of m
+% particles each.
+popsize = 400;                      % Fixed population size, a multiple of N
+if nargin < 2
+    popsize = 400;
 end
 
-if ~isnumeric(MaxFEs) || ~isscalar(MaxFEs) || ...
-        ~isreal(MaxFEs) || isnan(MaxFEs) || isinf(MaxFEs) || ...
-        MaxFEs < popsize || MaxFEs ~= floor(MaxFEs)
+N = 10;                             % Number of fitness levels NL
+m = popsize/N;                      % Number of particles in each level PopL
+phi = 0.3;                          % phi in Eq. (4)
+FEs = 0;                            % Fitness evaluations consumed so far
+MaxFEs = 3e6;                       % Evaluation budget of one run
 
-    error('HSLSO:InvalidMaxFEs', ...
-        'MaxFEs must be an integer not smaller than popsize.');
-end
+ComputeFitness = fCalculation;      % Objective handle used throughout
 
-if dimension < 1 || dimension ~= floor(dimension)
-    error('HSLSO:InvalidDimension', ...
-        'Dimension must be a positive integer.');
-end
-
-if mod(popsize,N) ~= 0
-    error('HSLSO:InvalidPopulation', ...
-        'Population size must be divisible by the number of levels.');
-end
-
-% Initial and final level-wise update probabilities.
-% PL_{l,init}  = l/N
-% PL_{l,final} = 1-l/N
+% Update probability of each level at the start and at the end of a run.
+% The two vectors are linearly interpolated in between: Eq. (7).
 PLinit = (1:N)/N;
 PLfina = 1-PLinit;
 
-% Auxiliary index for dimension-wise exemplar construction.
+% Column offsets used for vectorized dimension-wise exemplar construction.
+% For a row-index vector rows, pbest(rows+baseIndex) extracts one sampled
+% personal-best component from each decision dimension.
 baseIndex = (0:dimension-1)*popsize;
 
-%% ======================= Population initialization =====================
-
-p = zeros(popsize,dimension);
-v = zeros(popsize,dimension);
-fitnessx = zeros(1,popsize);
+%% ===================== 2. Population initialization ====================
+% Positions are sampled uniformly in the box, velocities uniformly in the
+% velocity range. Velocities are never clamped during the search.
+p = zeros(popsize,dimension);       % Particle positions
+v = zeros(popsize,dimension);       % Particle velocities
+fitness = zeros(1,popsize);         % Fitness of the current positions
 
 for i = 1:popsize
-
     p(i,:) = xmin+(xmax-xmin).*rand(1,dimension);
-
     v(i,:) = vmin+(vmax-vmin).*rand(1,dimension);
-
-    fitnessx(i) = fitness( ...
-        sequence,aa,lengthdata,L,p(i,:));
-
+    fitness(i) = ComputeFitness(p(i,:)',FuncId);
 end
 
-% Count all initial population evaluations.
-FEs = popsize;
+FEs = FEs+popsize;                  % Initialization costs popsize FEs
 
+% The personal best starts at the current state; the global best is the
+% best of the personal bests.
 pbest = p;
-pbestfitness = fitnessx;
+pbestfitness = fitness;
 
-% MSA uses SPS maximization.
-[bestever,id] = max(fitnessx);
+[bestever,id] = min(fitness);
 gbestx = p(id,:);
+gbesthistory = bestever*ones(FEs,1);    % Flat best-so-far so far
 
-%% ======================= FE history initialization =====================
-
-% Record the best-so-far SPS against the actual FE count.
-feTrace = zeros(MaxFEs-popsize+1,1);
-bestTrace = zeros(MaxFEs-popsize+1,1);
-
-traceCount = 1;
-
-feTrace(traceCount) = FEs;
-bestTrace(traceCount) = bestever;
-
-%% ======================= Main optimization loop ========================
-
-generation = 0;
-
+%% ===================== 3. Main optimization loop =======================
+% One pass over all fitness levels constitutes one generation. Level 1 is
+% retained without position updates during the current generation, whereas
+% particles in levels 2,...,NL participate in updating according to SAUC,
+% while their learning information is constructed through HSL.
 while FEs < MaxFEs
 
-    generation = generation+1;
-
-    % Rank particles from best to worst (SPS maximization).
-    [fitnessx,rank] = sort(fitnessx,'descend');
-
+    %% -- 3.1 Sort by fitness, then re-form the levels -------------------
+    % After sorting, particles are partitioned into fitness levels from best
+    % to worst. Level 1 contains the best-ranked particles and is retained
+    % without position updates during the current generation.
+    [fitness,rank] = sort(fitness);
     p = p(rank,:);
     v = v(rank,:);
     pbest = pbest(rank,:);
     pbestfitness = pbestfitness(rank);
 
-    % Update particles from level 2 to level N.
+    %% -- 3.2 Update every level below level 1 ---------------------------
     for sub = 2:N
 
-        if FEs >= MaxFEs
-            break;
-        end
-
-        %% Eq. (7): Probability Stage-Aware Update Control
-
-        PL = PLinit(sub) ...
-            +(PLfina(sub)-PLinit(sub))*(FEs/MaxFEs);
+        % Eq. (7): Probability Stage-Aware Update Control.
+        % The level-wise update probability is linearly interpolated from PLinit
+        % to PLfina according to the consumed FE ratio. Inferior levels receive
+        % larger update probabilities in the early stage, whereas relatively
+        % superior non-elite levels receive larger update probabilities in the
+        % later stage.
+        PL = PLinit(sub)+(PLfina(sub)-PLinit(sub))*(FEs/MaxFEs);
 
         for k = 1:m
 
-            if FEs >= MaxFEs
-                break;
-            end
-
-            % Probabilistic particle activation.
             if rand < PL
 
-                i = (sub-1)*m+k;
+                i = (sub-1)*m+k;    % Row index of this particle
 
-                %% ================= Level 2 =========================
-
+                %% -- 3.2.1 Heterogeneous Selection Learning -----------------------------
                 if sub == 2
-
-                    % Both exemplars are constructed from level 1.
-                    % Donors are independently sampled for each dimension.
-
+                    % Algorithm 1 -- level 2 has only level 1 above it, so
+                    % both exemplars are built dimension-wise from the
+                    % personal bests of level 1.
                     rowsA = randi(m,1,dimension);
                     rowsB = randi(m,1,dimension);
-
                     learna = pbest(rowsA+baseIndex);
                     learnb = pbest(rowsB+baseIndex);
-
-                %% =============== Levels 3 to N =====================
-
                 else
-
-                    %% Eq. (6): Progressive Superior-Level Sampling
-
-                    k_layers = ceil((sub-1) ...
-                        *(1-(FEs/MaxFEs)^2));
-
+                    % Algorithm 2 -- the admissible range of superior levels
+                    % k_l contracts from (sub-1) towards 2 as FEs/MaxFEs goes
+                    % from 0 to 1, so late updates learn from the top levels.
+                    % Eq. (6): progress-dependent admissible superior-level range.
+                    k_layers = ceil((sub-1)*(1-(FEs/MaxFEs)^2));
                     k_layers = max(2,k_layers);
 
-                    % Numerical and indexing safety.
-                    k_layers = min(sub-1,k_layers);
-
-                    % Sample two distinct superior levels.
+                    % Draw two distinct superior levels e1 < e2 <= k_l.
                     r = randperm(k_layers,2);
+                    if r(1) < r(2)
+                        a = r(1);
+                        b = r(2);
+                    else
+                        a = r(2);
+                        b = r(1);
+                    end
 
-                    a = min(r);
-                    b = max(r);
-
-                    % Dimension-wise personal-best donor sampling.
                     rowsA = (a-1)*m+randi(m,1,dimension);
                     rowsB = (b-1)*m+randi(m,1,dimension);
-
                     learna = pbest(rowsA+baseIndex);
                     learnb = pbest(rowsB+baseIndex);
-
                 end
 
-                %% ================= Velocity update =================
-
+                %% -- 3.2.2 Velocity and position update ------------------
+                % Eq. (4): HSLSO velocity update.
+                % The two attraction terms are guided by learna and learnb,
+                % respectively, with the second exemplar weighted by phi.
                 r1 = rand(1,dimension);
                 r2 = rand(1,dimension);
                 r3 = rand(1,dimension);
-
                 v(i,:) = r1.*v(i,:) ...
-                    +r2.*(learna-p(i,:)) ...
-                    +phi.*r3.*(learnb-p(i,:));
+                    + r2.*(learna-p(i,:)) ...
+                    + phi.*r3.*(learnb-p(i,:));
 
-                %% ================= Position update =================
-
+                % Eq. (5): HSLSO position update.
                 p(i,:) = p(i,:)+v(i,:);
 
-                % Boundary handling.
+                %% -- 3.2.3 Boundary handling ----------------------------
+                % Positions are clamped into the box; velocities are not.
                 p(i,:) = max(p(i,:),xmin);
                 p(i,:) = min(p(i,:),xmax);
 
-                %% ================= Fitness evaluation ===============
-
-                fitnessx(i) = fitness( ...
-                    sequence,aa,lengthdata,L,p(i,:));
-
+                %% -- 3.2.4 Evaluation ------------------------------------
+                fitness(i) = ComputeFitness(p(i,:)',FuncId);
                 FEs = FEs+1;
 
-                %% ================= Personal-best update ==============
-
-                if fitnessx(i) > pbestfitness(i)
-
-                    pbestfitness(i) = fitnessx(i);
+                %% -- 3.2.5 Personal best update --------------------------
+                if fitness(i) < pbestfitness(i)
+                    pbestfitness(i) = fitness(i);
                     pbest(i,:) = p(i,:);
-
                 end
 
-                %% ================= Global-best update ================
-
-                if fitnessx(i) > bestever
-
-                    bestever = fitnessx(i);
+                %% -- 3.2.6 Global best update ----------------------------
+                if fitness(i) < bestever
+                    bestever = fitness(i);
                     gbestx = p(i,:);
-
                 end
 
-                %% ================= FE history ========================
-
-                traceCount = traceCount+1;
-
-                feTrace(traceCount) = FEs;
-                bestTrace(traceCount) = bestever;
-
-                if mod(FEs,1000) == 0 || FEs == MaxFEs
-
-                    fprintf(['HSLSO-MSA: FE %d/%d, ' ...
-                        'Best SPS = %.8f\n'], ...
-                        FEs,MaxFEs,bestever);
-
+                %% -- 3.2.7 Progress and termination ----------------------
+                gbesthistory(FEs) = bestever;
+                if mod(FEs, floor(MaxFEs/10)) == 0 && FEs <= MaxFEs
+                    fprintf("HSLSO  FE %d  best = %e\n",FEs,bestever);
                 end
 
+                if FEs >= MaxFEs
+                    break;              % Budget exhausted inside the level
+                end
             end
+        end
+
+        if FEs >= MaxFEs
+            break;                      % Budget exhausted between levels
         end
     end
 end
 
-%% ======================= Final evaluation record =======================
-
-actualFEs = FEs;
-
-% Return a fixed-length convergence history sampled uniformly
-% over the consumed FE budget.
-if MaxFEs == popsize
-
-    gbesthistory = bestever*ones(historyPoints,1);
-
-else
-
-    if historyPoints == 1
-        sampleFEs = MaxFEs;
-    else
-        sampleFEs = linspace( ...
-            popsize,MaxFEs,historyPoints);
-    end
-
-    gbesthistory = interp1( ...
-        feTrace(1:traceCount), ...
-        bestTrace(1:traceCount), ...
-        sampleFEs,'previous')';
-
+%% ===================== 4. History completion ===========================
+% Defensive history handling. Under the current FE-based termination
+% logic, the optimization normally terminates exactly when FEs reaches
+% MaxFEs.
+if FEs < MaxFEs
+    gbesthistory(FEs+1:MaxFEs) = bestever;
+elseif FEs > MaxFEs
+    gbesthistory(MaxFEs+1:end) = [];
 end
-
-gbesthistory = gbesthistory(:);
-
-fprintf(['HSLSO-MSA completed: FEs = %d/%d, ' ...
-    'Generations = %d, Best SPS = %.8f\n'], ...
-    actualFEs,MaxFEs,generation,bestever);
 
 end

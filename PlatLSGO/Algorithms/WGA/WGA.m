@@ -13,7 +13,7 @@ nVar = dimension;
 nPop_Initial=nPop; % Initial swarm size
 nPop_Final=popsize/4; % Final swarm size
 CostFunction = Func;
-MaxNFE=10000*dimension;
+MaxNFE=3e6;
 
 % Approximate maximum number of iterations
 MaxIter0=ceil(MaxNFE/((nPop_Initial+nPop_Final)/2));   % Approximate Maximum Iterations
